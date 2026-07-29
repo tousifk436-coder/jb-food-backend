@@ -605,6 +605,916 @@
 //   }
 // };
 
+// import fs from "fs";
+// import path from "path";
+// import crypto from "crypto";
+// import { Readable } from "stream";
+// import { pipeline } from "stream/promises";
+
+// import Query from "../models/queryModel.js";
+// import PortfolioPdf from "../models/PortfolioPdf.modal.js";
+
+// import cloudinary from "../config/cloudinary.js";
+
+// const PORTFOLIO_KEY =
+//   "main-portfolio";
+
+// const DEFAULT_PDF_NAME =
+//   "ARV-Portfolio.pdf";
+
+// const CLOUDINARY_CHUNK_SIZE =
+//   20 * 1024 * 1024;
+
+// /* =====================================================
+//    HELPERS
+// ===================================================== */
+
+// const getBackendBaseUrl = (req) => {
+//   const environmentBaseUrl =
+//     process.env.BASE_URL?.trim();
+
+//   if (environmentBaseUrl) {
+//     return environmentBaseUrl.replace(
+//       /\/$/,
+//       ""
+//     );
+//   }
+
+//   return `${req.protocol}://${req.get(
+//     "host"
+//   )}`;
+// };
+
+// const sanitizePdfFileName = (
+//   fileName
+// ) => {
+//   let safeFileName = path
+//     .basename(
+//       fileName ||
+//         DEFAULT_PDF_NAME
+//     )
+//     .replace(/["\r\n]/g, "")
+//     .replace(
+//       /[^a-zA-Z0-9._()\- ]/g,
+//       "_"
+//     )
+//     .trim();
+
+//   if (!safeFileName) {
+//     safeFileName =
+//       DEFAULT_PDF_NAME;
+//   }
+
+//   if (
+//     !safeFileName
+//       .toLowerCase()
+//       .endsWith(".pdf")
+//   ) {
+//     safeFileName =
+//       `${safeFileName}.pdf`;
+//   }
+
+//   return safeFileName;
+// };
+
+// const removeTemporaryFile =
+//   async (filePath) => {
+//     if (!filePath) {
+//       return;
+//     }
+
+//     try {
+//       await fs.promises.unlink(
+//         filePath
+//       );
+//     } catch (error) {
+//       if (error.code !== "ENOENT") {
+//         console.error(
+//           "Temporary PDF removal error:",
+//           error
+//         );
+//       }
+//     }
+//   };
+
+// /*
+//  * Upload a large PDF to Cloudinary
+//  * using chunked upload.
+//  */
+// const uploadLargePdfToCloudinary = (
+//   localFilePath,
+//   publicId
+// ) => {
+//   return new Promise(
+//     (resolve, reject) => {
+//       let settled = false;
+
+//       cloudinary.uploader.upload_large(
+//         localFilePath,
+//         {
+//           resource_type: "raw",
+//           type: "upload",
+
+//           /*
+//            * Raw asset public IDs should
+//            * include the extension.
+//            */
+//           public_id: publicId,
+
+//           overwrite: false,
+
+//           chunk_size:
+//             CLOUDINARY_CHUNK_SIZE,
+
+//           tags: [
+//             "arv-portfolio",
+//             "portfolio-pdf",
+//           ],
+//         },
+//         (error, result) => {
+//           if (settled) {
+//             return;
+//           }
+
+//           if (error) {
+//             settled = true;
+//             reject(error);
+//             return;
+//           }
+
+//           /*
+//            * Chunked uploads can return
+//            * intermediate responses.
+//            */
+//           if (
+//             !result ||
+//             result.done === false
+//           ) {
+//             return;
+//           }
+
+//           settled = true;
+//           resolve(result);
+//         }
+//       );
+//     }
+//   );
+// };
+
+// /*
+//  * Delete a raw PDF from Cloudinary.
+//  */
+// const deleteCloudinaryPdf =
+//   async (publicId) => {
+//     if (!publicId) {
+//       return;
+//     }
+
+//     await cloudinary.uploader.destroy(
+//       publicId,
+//       {
+//         resource_type: "raw",
+//         type: "upload",
+//         invalidate: true,
+//       }
+//     );
+//   };
+
+// /* =====================================================
+//    CREATE PORTFOLIO QUERY
+
+//    POST /api/query
+// ===================================================== */
+
+// const createQuery = async (
+//   req,
+//   res
+// ) => {
+//   try {
+//     const name =
+//       req.body.name?.trim();
+
+//     const phone =
+//       req.body.phone?.trim();
+
+//     if (!name) {
+//       return res.status(400).json({
+//         success: false,
+//         message:
+//           "Name is required.",
+//       });
+//     }
+
+//     if (!phone) {
+//       return res.status(400).json({
+//         success: false,
+//         message:
+//           "Phone number is required.",
+//       });
+//     }
+
+//     const portfolioPdf =
+//       await PortfolioPdf.findOne({
+//         key: PORTFOLIO_KEY,
+//       }).lean();
+
+//     if (!portfolioPdf?.pdfUrl) {
+//       return res.status(404).json({
+//         success: false,
+//         message:
+//           "Portfolio PDF is currently not available.",
+//       });
+//     }
+
+//     const createdQuery =
+//       await Query.create({
+//         name,
+//         phone,
+//         pdf: portfolioPdf.pdfUrl,
+//       });
+
+//     const backendBaseUrl =
+//       getBackendBaseUrl(req);
+
+//     const downloadUrl =
+//       `${backendBaseUrl}/api/query/download`;
+
+//     return res.status(201).json({
+//       success: true,
+
+//       message:
+//         "Your details were submitted successfully.",
+
+//       data: createdQuery,
+
+//       fileName:
+//         portfolioPdf.originalName ||
+//         DEFAULT_PDF_NAME,
+
+//       downloadUrl,
+//     });
+//   } catch (error) {
+//     console.error(
+//       "Create query error:",
+//       error
+//     );
+
+//     return res.status(500).json({
+//       success: false,
+
+//       message:
+//         error.message ||
+//         "Failed to submit your details.",
+//     });
+//   }
+// };
+
+// /* =====================================================
+//    GET ALL PORTFOLIO QUERIES
+
+//    GET /api/query
+// ===================================================== */
+
+// const getAllQueries = async (
+//   req,
+//   res
+// ) => {
+//   try {
+//     const page = Math.max(
+//       Number.parseInt(
+//         req.query.page,
+//         10
+//       ) || 1,
+//       1
+//     );
+
+//     const limit = Math.min(
+//       Math.max(
+//         Number.parseInt(
+//           req.query.limit,
+//           10
+//         ) || 10,
+//         1
+//       ),
+//       100
+//     );
+
+//     const search =
+//       req.query.search?.trim() ||
+//       "";
+
+//     const skip =
+//       (page - 1) * limit;
+
+//     const filter = search
+//       ? {
+//           $or: [
+//             {
+//               name: {
+//                 $regex: search,
+//                 $options: "i",
+//               },
+//             },
+//             {
+//               phone: {
+//                 $regex: search,
+//                 $options: "i",
+//               },
+//             },
+//           ],
+//         }
+//       : {};
+
+//     const [
+//       queries,
+//       totalQueries,
+//     ] = await Promise.all([
+//       Query.find(filter)
+//         .sort({
+//           createdAt: -1,
+//         })
+//         .skip(skip)
+//         .limit(limit)
+//         .lean(),
+
+//       Query.countDocuments(
+//         filter
+//       ),
+//     ]);
+
+//     return res.status(200).json({
+//       success: true,
+
+//       message:
+//         "Portfolio queries fetched successfully.",
+
+//       data: {
+//         queries,
+//         totalQueries,
+//         currentPage: page,
+
+//         totalPages: Math.ceil(
+//           totalQueries / limit
+//         ),
+
+//         limit,
+//       },
+//     });
+//   } catch (error) {
+//     console.error(
+//       "Get Portfolio queries error:",
+//       error
+//     );
+
+//     return res.status(500).json({
+//       success: false,
+
+//       message:
+//         error.message ||
+//         "Failed to fetch Portfolio queries.",
+//     });
+//   }
+// };
+
+// /* =====================================================
+//    DELETE PORTFOLIO QUERY
+
+//    DELETE /api/query/:id
+// ===================================================== */
+
+// const deleteQuery = async (
+//   req,
+//   res
+// ) => {
+//   try {
+//     const queryId =
+//       req.params.id;
+
+//     const deletedQuery =
+//       await Query.findByIdAndDelete(
+//         queryId
+//       );
+
+//     if (!deletedQuery) {
+//       return res.status(404).json({
+//         success: false,
+//         message:
+//           "Portfolio query not found.",
+//       });
+//     }
+
+//     return res.status(200).json({
+//       success: true,
+//       message:
+//         "Portfolio query deleted successfully.",
+//     });
+//   } catch (error) {
+//     console.error(
+//       "Delete Portfolio query error:",
+//       error
+//     );
+
+//     if (
+//       error.name === "CastError"
+//     ) {
+//       return res.status(400).json({
+//         success: false,
+//         message:
+//           "Invalid Portfolio query ID.",
+//       });
+//     }
+
+//     return res.status(500).json({
+//       success: false,
+
+//       message:
+//         error.message ||
+//         "Failed to delete Portfolio query.",
+//     });
+//   }
+// };
+
+// /* =====================================================
+//    UPLOAD PORTFOLIO PDF TO CLOUDINARY
+
+//    POST /api/query/upload-portfolio
+// ===================================================== */
+
+// const uploadPortfolio = async (
+//   req,
+//   res
+// ) => {
+//   let newCloudinaryPublicId =
+//     null;
+
+//   try {
+//     if (!req.file) {
+//       return res.status(400).json({
+//         success: false,
+
+//         message:
+//           "Please select a PDF file.",
+//       });
+//     }
+
+//     if (
+//       !req.file.path ||
+//       !fs.existsSync(req.file.path)
+//     ) {
+//       return res.status(400).json({
+//         success: false,
+
+//         message:
+//           "Temporary uploaded PDF file was not found.",
+//       });
+//     }
+
+//     const previousPortfolio =
+//       await PortfolioPdf.findOne({
+//         key: PORTFOLIO_KEY,
+//       }).lean();
+
+//     /*
+//      * Every upload gets a new public ID.
+//      * This prevents old cached PDFs from
+//      * being used after replacement.
+//      */
+//     const uniquePublicId =
+//       `arv/portfolio/portfolio-${
+//         Date.now()
+//       }-${crypto.randomUUID()}.pdf`;
+
+//     const uploadResult =
+//       await uploadLargePdfToCloudinary(
+//         req.file.path,
+//         uniquePublicId
+//       );
+
+//     if (
+//       !uploadResult?.secure_url
+//     ) {
+//       throw new Error(
+//         "Cloudinary did not return a PDF URL."
+//       );
+//     }
+
+//     if (
+//       !uploadResult?.public_id
+//     ) {
+//       throw new Error(
+//         "Cloudinary did not return a public ID."
+//       );
+//     }
+
+//     newCloudinaryPublicId =
+//       uploadResult.public_id;
+
+//     const safeOriginalName =
+//       sanitizePdfFileName(
+//         req.file.originalname
+//       );
+
+//     const savedPortfolio =
+//       await PortfolioPdf.findOneAndUpdate(
+//         {
+//           key: PORTFOLIO_KEY,
+//         },
+//         {
+//           $set: {
+//             key:
+//               PORTFOLIO_KEY,
+
+//             pdfUrl:
+//               uploadResult.secure_url,
+
+//             publicId:
+//               uploadResult.public_id,
+
+//             assetId:
+//               uploadResult.asset_id ||
+//               "",
+
+//             resourceType:
+//               uploadResult.resource_type ||
+//               "raw",
+
+//             originalName:
+//               safeOriginalName,
+
+//             bytes:
+//               uploadResult.bytes ||
+//               req.file.size ||
+//               0,
+
+//             cloudinaryVersion:
+//               uploadResult.version ||
+//               0,
+
+//             uploadedAt:
+//               new Date(),
+//           },
+//         },
+//         {
+//           new: true,
+//           upsert: true,
+//           runValidators: true,
+//           setDefaultsOnInsert: true,
+//         }
+//       );
+
+//     /*
+//      * Delete the previous PDF only after
+//      * the new Cloudinary upload and MongoDB
+//      * update succeed.
+//      */
+//     if (
+//       previousPortfolio?.publicId &&
+//       previousPortfolio.publicId !==
+//         savedPortfolio.publicId
+//     ) {
+//       try {
+//         await deleteCloudinaryPdf(
+//           previousPortfolio.publicId
+//         );
+//       } catch (deleteError) {
+//         console.error(
+//           "Previous Cloudinary PDF deletion error:",
+//           deleteError
+//         );
+//       }
+//     }
+
+//     const backendBaseUrl =
+//       getBackendBaseUrl(req);
+
+//     const downloadUrl =
+//       `${backendBaseUrl}/api/query/download`;
+
+//     return res.status(200).json({
+//       success: true,
+
+//       message:
+//         "Portfolio PDF uploaded to Cloudinary successfully.",
+
+//       fileName:
+//         savedPortfolio.originalName,
+
+//       downloadUrl,
+
+//       data: {
+//         id:
+//           savedPortfolio._id,
+
+//         fileName:
+//           savedPortfolio.originalName,
+
+//         pdfUrl:
+//           savedPortfolio.pdfUrl,
+
+//         publicId:
+//           savedPortfolio.publicId,
+
+//         bytes:
+//           savedPortfolio.bytes,
+
+//         sizeInMB: Number(
+//           (
+//             savedPortfolio.bytes /
+//             (1024 * 1024)
+//           ).toFixed(2)
+//         ),
+
+//         uploadedAt:
+//           savedPortfolio.uploadedAt,
+
+//         downloadUrl,
+//       },
+//     });
+//   } catch (error) {
+//     console.error(
+//       "Portfolio PDF upload error:",
+//       error
+//     );
+
+//     /*
+//      * If Cloudinary upload succeeded but
+//      * MongoDB update failed, remove the
+//      * incomplete new Cloudinary asset.
+//      */
+//     if (
+//       newCloudinaryPublicId
+//     ) {
+//       try {
+//         await deleteCloudinaryPdf(
+//           newCloudinaryPublicId
+//         );
+//       } catch (cleanupError) {
+//         console.error(
+//           "Incomplete Cloudinary PDF cleanup error:",
+//           cleanupError
+//         );
+//       }
+//     }
+
+//     const possibleStatusCode =
+//       Number(
+//         error?.http_code ||
+//           error?.statusCode
+//       );
+
+//     const statusCode =
+//       possibleStatusCode >= 400 &&
+//       possibleStatusCode <= 599
+//         ? possibleStatusCode
+//         : 500;
+
+//     return res
+//       .status(statusCode)
+//       .json({
+//         success: false,
+
+//         message:
+//           error.message ||
+//           "Failed to upload Portfolio PDF.",
+//       });
+//   } finally {
+//     await removeTemporaryFile(
+//       req.file?.path
+//     );
+//   }
+// };
+
+// /* =====================================================
+//    GET CURRENT PORTFOLIO INFORMATION
+
+//    GET /api/query/portfolio-info
+// ===================================================== */
+
+// const getPortfolioInfo = async (
+//   req,
+//   res
+// ) => {
+//   try {
+//     const portfolioPdf =
+//       await PortfolioPdf.findOne({
+//         key: PORTFOLIO_KEY,
+//       }).lean();
+
+//     if (!portfolioPdf) {
+//       return res.status(404).json({
+//         success: false,
+
+//         message:
+//           "Portfolio PDF has not been uploaded.",
+//       });
+//     }
+
+//     const backendBaseUrl =
+//       getBackendBaseUrl(req);
+
+//     const downloadUrl =
+//       `${backendBaseUrl}/api/query/download`;
+
+//     return res.status(200).json({
+//       success: true,
+
+//       message:
+//         "Portfolio PDF information fetched successfully.",
+
+//       data: {
+//         fileName:
+//           portfolioPdf.originalName ||
+//           DEFAULT_PDF_NAME,
+
+//         pdfUrl:
+//           portfolioPdf.pdfUrl,
+
+//         bytes:
+//           portfolioPdf.bytes ||
+//           0,
+
+//         sizeInMB: Number(
+//           (
+//             (portfolioPdf.bytes ||
+//               0) /
+//             (1024 * 1024)
+//           ).toFixed(2)
+//         ),
+
+//         uploadedAt:
+//           portfolioPdf.uploadedAt,
+
+//         updatedAt:
+//           portfolioPdf.updatedAt,
+
+//         downloadUrl,
+//       },
+//     });
+//   } catch (error) {
+//     console.error(
+//       "Get Portfolio information error:",
+//       error
+//     );
+
+//     return res.status(500).json({
+//       success: false,
+
+//       message:
+//         error.message ||
+//         "Failed to fetch Portfolio information.",
+//     });
+//   }
+// };
+
+// /* =====================================================
+//    DOWNLOAD LATEST PORTFOLIO PDF
+
+//    GET /api/query/download
+// ===================================================== */
+
+// const downloadPortfolio = async (
+//   req,
+//   res
+// ) => {
+//   try {
+//     const portfolioPdf =
+//       await PortfolioPdf.findOne({
+//         key: PORTFOLIO_KEY,
+//       }).lean();
+
+//     if (!portfolioPdf?.pdfUrl) {
+//       return res.status(404).json({
+//         success: false,
+
+//         message:
+//           "Portfolio PDF is not available.",
+//       });
+//     }
+
+//     const cloudinaryResponse =
+//       await fetch(
+//         portfolioPdf.pdfUrl,
+//         {
+//           method: "GET",
+//           cache: "no-store",
+
+//           headers: {
+//             Accept:
+//               "application/pdf,application/octet-stream",
+//           },
+//         }
+//       );
+
+//     if (
+//       !cloudinaryResponse.ok
+//     ) {
+//       throw new Error(
+//         `Cloudinary PDF request failed with status ${cloudinaryResponse.status}.`
+//       );
+//     }
+
+//     if (
+//       !cloudinaryResponse.body
+//     ) {
+//       throw new Error(
+//         "Cloudinary returned an empty PDF response."
+//       );
+//     }
+
+//     const safeFileName =
+//       sanitizePdfFileName(
+//         portfolioPdf.originalName
+//       );
+
+//     res.setHeader(
+//       "Content-Type",
+//       "application/pdf"
+//     );
+
+//     res.setHeader(
+//       "Content-Disposition",
+//       `attachment; filename="${safeFileName}"; filename*=UTF-8''${encodeURIComponent(
+//         safeFileName
+//       )}`
+//     );
+
+//     res.setHeader(
+//       "Cache-Control",
+//       "no-store, no-cache, must-revalidate, proxy-revalidate"
+//     );
+
+//     res.setHeader(
+//       "Pragma",
+//       "no-cache"
+//     );
+
+//     res.setHeader(
+//       "Expires",
+//       "0"
+//     );
+
+//     res.setHeader(
+//       "Surrogate-Control",
+//       "no-store"
+//     );
+
+//     const contentLength =
+//       cloudinaryResponse.headers.get(
+//         "content-length"
+//       );
+
+//     if (contentLength) {
+//       res.setHeader(
+//         "Content-Length",
+//         contentLength
+//       );
+//     }
+
+//     /*
+//      * Stream the PDF instead of loading
+//      * the complete PDF into backend RAM.
+//      */
+//     const cloudinaryNodeStream =
+//       Readable.fromWeb(
+//         cloudinaryResponse.body
+//       );
+
+//     await pipeline(
+//       cloudinaryNodeStream,
+//       res
+//     );
+
+//     return;
+//   } catch (error) {
+//     console.error(
+//       "Portfolio PDF download error:",
+//       error
+//     );
+
+//     if (res.headersSent) {
+//       res.destroy(error);
+//       return;
+//     }
+
+//     return res.status(500).json({
+//       success: false,
+
+//       message:
+//         error.message ||
+//         "Failed to download Portfolio PDF.",
+//     });
+//   }
+// };
+
+// export {
+//   createQuery,
+//   getAllQueries,
+//   deleteQuery,
+//   uploadPortfolio,
+//   getPortfolioInfo,
+//   downloadPortfolio,
+// };
+
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
@@ -616,17 +1526,19 @@ import PortfolioPdf from "../models/PortfolioPdf.modal.js";
 
 import cloudinary from "../config/cloudinary.js";
 
-const PORTFOLIO_KEY =
-  "main-portfolio";
+/* =====================================================
+   CONSTANTS
+===================================================== */
 
-const DEFAULT_PDF_NAME =
-  "ARV-Portfolio.pdf";
+const PORTFOLIO_KEY = "main-portfolio";
+
+const DEFAULT_PDF_NAME = "ARV-Portfolio.pdf";
 
 const CLOUDINARY_CHUNK_SIZE =
   20 * 1024 * 1024;
 
 /* =====================================================
-   HELPERS
+   HELPER: GET BACKEND BASE URL
 ===================================================== */
 
 const getBackendBaseUrl = (req) => {
@@ -645,13 +1557,16 @@ const getBackendBaseUrl = (req) => {
   )}`;
 };
 
+/* =====================================================
+   HELPER: SANITIZE PDF FILE NAME
+===================================================== */
+
 const sanitizePdfFileName = (
   fileName
 ) => {
   let safeFileName = path
     .basename(
-      fileName ||
-        DEFAULT_PDF_NAME
+      fileName || DEFAULT_PDF_NAME
     )
     .replace(/["\r\n]/g, "")
     .replace(
@@ -661,8 +1576,7 @@ const sanitizePdfFileName = (
     .trim();
 
   if (!safeFileName) {
-    safeFileName =
-      DEFAULT_PDF_NAME;
+    safeFileName = DEFAULT_PDF_NAME;
   }
 
   if (
@@ -677,30 +1591,33 @@ const sanitizePdfFileName = (
   return safeFileName;
 };
 
-const removeTemporaryFile =
-  async (filePath) => {
-    if (!filePath) {
-      return;
-    }
+/* =====================================================
+   HELPER: DELETE TEMPORARY LOCAL FILE
+===================================================== */
 
-    try {
-      await fs.promises.unlink(
-        filePath
+const removeTemporaryFile = async (
+  filePath
+) => {
+  if (!filePath) {
+    return;
+  }
+
+  try {
+    await fs.promises.unlink(filePath);
+  } catch (error) {
+    if (error.code !== "ENOENT") {
+      console.error(
+        "Temporary PDF removal error:",
+        error
       );
-    } catch (error) {
-      if (error.code !== "ENOENT") {
-        console.error(
-          "Temporary PDF removal error:",
-          error
-        );
-      }
     }
-  };
+  }
+};
 
-/*
- * Upload a large PDF to Cloudinary
- * using chunked upload.
- */
+/* =====================================================
+   HELPER: UPLOAD LARGE PDF TO CLOUDINARY
+===================================================== */
+
 const uploadLargePdfToCloudinary = (
   localFilePath,
   publicId
@@ -716,13 +1633,20 @@ const uploadLargePdfToCloudinary = (
           type: "upload",
 
           /*
-           * Raw asset public IDs should
-           * include the extension.
+           * Raw Cloudinary public IDs should
+           * include the original extension.
            */
           public_id: publicId,
 
+          /*
+           * Every upload uses a new public ID,
+           * so overwrite is not required.
+           */
           overwrite: false,
 
+          /*
+           * Upload the PDF in 20 MB chunks.
+           */
           chunk_size:
             CLOUDINARY_CHUNK_SIZE,
 
@@ -743,7 +1667,7 @@ const uploadLargePdfToCloudinary = (
           }
 
           /*
-           * Chunked uploads can return
+           * Chunked uploads may produce
            * intermediate responses.
            */
           if (
@@ -761,24 +1685,26 @@ const uploadLargePdfToCloudinary = (
   );
 };
 
-/*
- * Delete a raw PDF from Cloudinary.
- */
-const deleteCloudinaryPdf =
-  async (publicId) => {
-    if (!publicId) {
-      return;
-    }
+/* =====================================================
+   HELPER: DELETE CLOUDINARY PDF
+===================================================== */
 
-    await cloudinary.uploader.destroy(
-      publicId,
-      {
-        resource_type: "raw",
-        type: "upload",
-        invalidate: true,
-      }
-    );
-  };
+const deleteCloudinaryPdf = async (
+  publicId
+) => {
+  if (!publicId) {
+    return;
+  }
+
+  await cloudinary.uploader.destroy(
+    publicId,
+    {
+      resource_type: "raw",
+      type: "upload",
+      invalidate: true,
+    }
+  );
+};
 
 /* =====================================================
    CREATE PORTFOLIO QUERY
@@ -792,16 +1718,23 @@ const createQuery = async (
 ) => {
   try {
     const name =
-      req.body.name?.trim();
+      req.body.name?.trim() || "";
 
     const phone =
-      req.body.phone?.trim();
+      req.body.phone?.trim() || "";
 
     if (!name) {
       return res.status(400).json({
         success: false,
+        message: "Name is required.",
+      });
+    }
+
+    if (name.length > 100) {
+      return res.status(400).json({
+        success: false,
         message:
-          "Name is required.",
+          "Name must not exceed 100 characters.",
       });
     }
 
@@ -810,6 +1743,17 @@ const createQuery = async (
         success: false,
         message:
           "Phone number is required.",
+      });
+    }
+
+    const phonePattern =
+      /^[0-9+()\-\s]{7,20}$/;
+
+    if (!phonePattern.test(phone)) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Please enter a valid phone number.",
       });
     }
 
@@ -830,6 +1774,11 @@ const createQuery = async (
       await Query.create({
         name,
         phone,
+
+        /*
+         * Stores the current Cloudinary PDF
+         * URL as a snapshot in the query.
+         */
         pdf: portfolioPdf.pdfUrl,
       });
 
@@ -858,6 +1807,18 @@ const createQuery = async (
       "Create query error:",
       error
     );
+
+    if (
+      error.name ===
+      "ValidationError"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          error.message ||
+          "Invalid query information.",
+      });
+    }
 
     return res.status(500).json({
       success: false,
@@ -900,8 +1861,7 @@ const getAllQueries = async (
     );
 
     const search =
-      req.query.search?.trim() ||
-      "";
+      req.query.search?.trim() || "";
 
     const skip =
       (page - 1) * limit;
@@ -937,10 +1897,15 @@ const getAllQueries = async (
         .limit(limit)
         .lean(),
 
-      Query.countDocuments(
-        filter
-      ),
+      Query.countDocuments(filter),
     ]);
+
+    const totalPages =
+      totalQueries > 0
+        ? Math.ceil(
+            totalQueries / limit
+          )
+        : 0;
 
     return res.status(200).json({
       success: true,
@@ -952,11 +1917,7 @@ const getAllQueries = async (
         queries,
         totalQueries,
         currentPage: page,
-
-        totalPages: Math.ceil(
-          totalQueries / limit
-        ),
-
+        totalPages,
         limit,
       },
     });
@@ -988,7 +1949,15 @@ const deleteQuery = async (
 ) => {
   try {
     const queryId =
-      req.params.id;
+      req.params.id?.trim();
+
+    if (!queryId) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Portfolio query ID is required.",
+      });
+    }
 
     const deletedQuery =
       await Query.findByIdAndDelete(
@@ -1035,7 +2004,7 @@ const deleteQuery = async (
 };
 
 /* =====================================================
-   UPLOAD PORTFOLIO PDF TO CLOUDINARY
+   UPLOAD OR REPLACE PORTFOLIO PDF
 
    POST /api/query/upload-portfolio
 ===================================================== */
@@ -1044,14 +2013,17 @@ const uploadPortfolio = async (
   req,
   res
 ) => {
-  let newCloudinaryPublicId =
-    null;
+  /*
+   * This is used only for rollback when
+   * Cloudinary upload succeeds but the
+   * MongoDB update fails.
+   */
+  let rollbackPublicId = null;
 
   try {
     if (!req.file) {
       return res.status(400).json({
         success: false,
-
         message:
           "Please select a PDF file.",
       });
@@ -1063,7 +2035,6 @@ const uploadPortfolio = async (
     ) {
       return res.status(400).json({
         success: false,
-
         message:
           "Temporary uploaded PDF file was not found.",
       });
@@ -1075,9 +2046,9 @@ const uploadPortfolio = async (
       }).lean();
 
     /*
-     * Every upload gets a new public ID.
-     * This prevents old cached PDFs from
-     * being used after replacement.
+     * Every upload gets a unique public ID.
+     * This prevents the browser or CDN from
+     * returning an old cached PDF.
      */
     const uniquePublicId =
       `arv/portfolio/portfolio-${
@@ -1106,7 +2077,7 @@ const uploadPortfolio = async (
       );
     }
 
-    newCloudinaryPublicId =
+    rollbackPublicId =
       uploadResult.public_id;
 
     const safeOriginalName =
@@ -1162,10 +2133,22 @@ const uploadPortfolio = async (
         }
       );
 
+    if (!savedPortfolio) {
+      throw new Error(
+        "Portfolio information could not be saved."
+      );
+    }
+
     /*
-     * Delete the previous PDF only after
-     * the new Cloudinary upload and MongoDB
-     * update succeed.
+     * MongoDB now points to the new PDF.
+     * Do not delete the new file in catch.
+     */
+    rollbackPublicId = null;
+
+    /*
+     * Delete the old Cloudinary PDF only
+     * after the new PDF and MongoDB record
+     * have been saved successfully.
      */
     if (
       previousPortfolio?.publicId &&
@@ -1177,6 +2160,10 @@ const uploadPortfolio = async (
           previousPortfolio.publicId
         );
       } catch (deleteError) {
+        /*
+         * Do not fail the current upload
+         * when old-file deletion fails.
+         */
         console.error(
           "Previous Cloudinary PDF deletion error:",
           deleteError
@@ -1237,16 +2224,13 @@ const uploadPortfolio = async (
     );
 
     /*
-     * If Cloudinary upload succeeded but
-     * MongoDB update failed, remove the
-     * incomplete new Cloudinary asset.
+     * Delete the newly uploaded Cloudinary
+     * file only when MongoDB was not updated.
      */
-    if (
-      newCloudinaryPublicId
-    ) {
+    if (rollbackPublicId) {
       try {
         await deleteCloudinaryPdf(
-          newCloudinaryPublicId
+          rollbackPublicId
         );
       } catch (cleanupError) {
         console.error(
@@ -1259,7 +2243,8 @@ const uploadPortfolio = async (
     const possibleStatusCode =
       Number(
         error?.http_code ||
-          error?.statusCode
+          error?.statusCode ||
+          error?.status
       );
 
     const statusCode =
@@ -1278,6 +2263,10 @@ const uploadPortfolio = async (
           "Failed to upload Portfolio PDF.",
       });
   } finally {
+    /*
+     * The file is uploaded to Cloudinary,
+     * so remove the temporary server copy.
+     */
     await removeTemporaryFile(
       req.file?.path
     );
@@ -1300,10 +2289,12 @@ const getPortfolioInfo = async (
         key: PORTFOLIO_KEY,
       }).lean();
 
-    if (!portfolioPdf) {
+    if (
+      !portfolioPdf ||
+      !portfolioPdf.pdfUrl
+    ) {
       return res.status(404).json({
         success: false,
-
         message:
           "Portfolio PDF has not been uploaded.",
       });
@@ -1322,6 +2313,9 @@ const getPortfolioInfo = async (
         "Portfolio PDF information fetched successfully.",
 
       data: {
+        id:
+          portfolioPdf._id,
+
         fileName:
           portfolioPdf.originalName ||
           DEFAULT_PDF_NAME,
@@ -1330,19 +2324,20 @@ const getPortfolioInfo = async (
           portfolioPdf.pdfUrl,
 
         bytes:
-          portfolioPdf.bytes ||
-          0,
+          portfolioPdf.bytes || 0,
 
         sizeInMB: Number(
           (
-            (portfolioPdf.bytes ||
-              0) /
+            (portfolioPdf.bytes || 0) /
             (1024 * 1024)
           ).toFixed(2)
         ),
 
         uploadedAt:
           portfolioPdf.uploadedAt,
+
+        createdAt:
+          portfolioPdf.createdAt,
 
         updatedAt:
           portfolioPdf.updatedAt,
@@ -1385,12 +2380,15 @@ const downloadPortfolio = async (
     if (!portfolioPdf?.pdfUrl) {
       return res.status(404).json({
         success: false,
-
         message:
           "Portfolio PDF is not available.",
       });
     }
 
+    /*
+     * Fetch the latest PDF from the URL
+     * currently stored in MongoDB.
+     */
     const cloudinaryResponse =
       await fetch(
         portfolioPdf.pdfUrl,
@@ -1405,20 +2403,85 @@ const downloadPortfolio = async (
         }
       );
 
-    if (
-      !cloudinaryResponse.ok
-    ) {
-      throw new Error(
-        `Cloudinary PDF request failed with status ${cloudinaryResponse.status}.`
+    /*
+     * Return the real Cloudinary delivery
+     * error instead of only showing 401.
+     */
+    if (!cloudinaryResponse.ok) {
+      const cloudinaryError =
+        cloudinaryResponse.headers.get(
+          "x-cld-error"
+        );
+
+      console.error(
+        "Cloudinary PDF delivery failed:",
+        {
+          status:
+            cloudinaryResponse.status,
+
+          statusText:
+            cloudinaryResponse.statusText,
+
+          cloudinaryError,
+
+          pdfUrl:
+            portfolioPdf.pdfUrl,
+        }
       );
+
+      const deliveryError =
+        new Error(
+          cloudinaryError ||
+            `Cloudinary PDF request failed with status ${cloudinaryResponse.status}.`
+        );
+
+      /*
+       * The backend is working, but the
+       * upstream Cloudinary response failed.
+       */
+      deliveryError.statusCode = 502;
+
+      throw deliveryError;
     }
 
-    if (
-      !cloudinaryResponse.body
-    ) {
-      throw new Error(
-        "Cloudinary returned an empty PDF response."
+    const contentType =
+      cloudinaryResponse.headers.get(
+        "content-type"
+      ) || "";
+
+    const isPdfResponse =
+      contentType.includes(
+        "application/pdf"
+      ) ||
+      contentType.includes(
+        "application/octet-stream"
+      ) ||
+      contentType.includes(
+        "binary/octet-stream"
       );
+
+    if (!isPdfResponse) {
+      const invalidTypeError =
+        new Error(
+          `Cloudinary returned an invalid file type: ${
+            contentType || "unknown"
+          }.`
+        );
+
+      invalidTypeError.statusCode = 502;
+
+      throw invalidTypeError;
+    }
+
+    if (!cloudinaryResponse.body) {
+      const emptyResponseError =
+        new Error(
+          "Cloudinary returned an empty PDF response."
+        );
+
+      emptyResponseError.statusCode = 502;
+
+      throw emptyResponseError;
     }
 
     const safeFileName =
@@ -1471,8 +2534,9 @@ const downloadPortfolio = async (
     }
 
     /*
-     * Stream the PDF instead of loading
-     * the complete PDF into backend RAM.
+     * Stream the Cloudinary PDF directly
+     * to the user without loading the
+     * complete file into backend memory.
      */
     const cloudinaryNodeStream =
       Readable.fromWeb(
@@ -1491,20 +2555,43 @@ const downloadPortfolio = async (
       error
     );
 
+    /*
+     * The stream may already have started.
+     * JSON cannot be returned after headers
+     * have been sent.
+     */
     if (res.headersSent) {
       res.destroy(error);
       return;
     }
 
-    return res.status(500).json({
-      success: false,
+    const possibleStatusCode =
+      Number(
+        error?.statusCode ||
+          error?.status
+      );
 
-      message:
-        error.message ||
-        "Failed to download Portfolio PDF.",
-    });
+    const statusCode =
+      possibleStatusCode >= 400 &&
+      possibleStatusCode <= 599
+        ? possibleStatusCode
+        : 500;
+
+    return res
+      .status(statusCode)
+      .json({
+        success: false,
+
+        message:
+          error.message ||
+          "Failed to download Portfolio PDF.",
+      });
   }
 };
+
+/* =====================================================
+   EXPORT CONTROLLERS
+===================================================== */
 
 export {
   createQuery,
