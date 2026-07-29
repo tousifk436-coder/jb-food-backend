@@ -1,3 +1,27 @@
+// // // import mongoose from "mongoose";
+
+// // // const querySchema = new mongoose.Schema(
+// // //   {
+// // //     name: {
+// // //       type: String,
+// // //       required: true,
+// // //       trim: true,
+// // //     },
+// // //     phone: {
+// // //       type: String,
+// // //       required: true,
+// // //       trim: true,
+// // //     },
+// // //     pdf: {
+// // //       type: String,
+// // //       required: true,
+// // //     },
+// // //   },
+// // //   { timestamps: true }
+// // // );
+
+// // // export default mongoose.model("Query", querySchema);
+
 // // import mongoose from "mongoose";
 
 // // const querySchema = new mongoose.Schema(
@@ -7,17 +31,21 @@
 // //       required: true,
 // //       trim: true,
 // //     },
+
 // //     phone: {
 // //       type: String,
 // //       required: true,
 // //       trim: true,
 // //     },
+
 // //     pdf: {
 // //       type: String,
-// //       required: true,
+// //       default: "/uploads/pdfs/portfolio.pdf",
 // //     },
 // //   },
-// //   { timestamps: true }
+// //   {
+// //     timestamps: true,
+// //   }
 // // );
 
 // // export default mongoose.model("Query", querySchema);
@@ -28,13 +56,13 @@
 //   {
 //     name: {
 //       type: String,
-//       required: true,
+//       required: [true, "Name is required"],
 //       trim: true,
 //     },
 
 //     phone: {
 //       type: String,
-//       required: true,
+//       required: [true, "Phone number is required"],
 //       trim: true,
 //     },
 
@@ -56,19 +84,27 @@ const querySchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, "Name is required"],
+      required: true,
       trim: true,
+      maxlength: 100,
     },
 
     phone: {
       type: String,
-      required: [true, "Phone number is required"],
+      required: true,
       trim: true,
+      maxlength: 30,
     },
 
+    /*
+     * Stores a snapshot of the Cloudinary
+     * PDF URL available when this query
+     * was submitted.
+     */
     pdf: {
       type: String,
-      default: "/uploads/pdfs/portfolio.pdf",
+      default: "",
+      trim: true,
     },
   },
   {
@@ -76,4 +112,7 @@ const querySchema = new mongoose.Schema(
   }
 );
 
-export default mongoose.model("Query", querySchema);
+export default mongoose.model(
+  "Query",
+  querySchema
+);
