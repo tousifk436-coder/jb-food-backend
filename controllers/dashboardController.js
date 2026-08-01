@@ -1,439 +1,353 @@
-// import Blog from "../models/Blog.modal.js";
-// import BookConsultation from "../models/BookConsultation.modal.js";
-// import Comment from "../models/Comment.modal.js";
-// import ContactPage from "../models/ContactPage.modal.js";
-// import Gallery from "../models/Gallery.modal.js";
-// import HomeSlider from "../models/HomeSlider.modal.js";
-// import Portfolio from "../models/Portfolio.modal.js";
-// import Testimonials from "../models/Testimonials.modal.js";
-// import User from "../models/User.modal.js";
-
-// import { apiResponse } from "../utils/apiResponse.js";
-// import { asyncHandler } from "../utils/asynchandler.js";
-
-// // GET /api/dashboard
-// const getDashboardStats = asyncHandler(async (req, res) => {
-//   try {
-//     // Sirf Admin ke liye
-//     // if (!req.user) {
-//     //   return res
-//     //     .status(401)
-//     //     .json(new apiResponse(401, null, "Authentication required"));
-//     // }
-
-//     // if (req.user.role !== "Admin") {
-//     //   return res
-//     //     .status(403)
-//     //     .json(new apiResponse(403, null, "Admin access required"));
-//     // }
-
-//     const [
-//       // Users
-//       // totalUsers,
-//       // activeUsers,
-//       // inactiveUsers,
-
-//       // Blogs
-//       totalBlogs,
-//       activeBlogs,
-//       inactiveBlogs,
-
-//       // Portfolios
-//       totalPortfolios,
-//       activePortfolios,
-//       inactivePortfolios,
-
-//       // Comments
-//       // totalComments,
-//       // activeComments,
-//       // inactiveComments,
-
-//       // Gallery
-//       totalGallery,
-//       activeGallery,
-//       inactiveGallery,
-
-//       // Sliders
-//       totalSliders,
-//       activeSliders,
-//       inactiveSliders,
-
-//       // Testimonials
-//       // totalTestimonials,
-//       // activeTestimonials,
-//       // inactiveTestimonials,
-
-//       // Consultations
-//       totalConsultations,
-//       readConsultations,
-//       unreadConsultations,
-
-//       // Contacts
-//       totalContacts,
-//       readContacts,
-//       unreadContacts,
-
-//       // Recent unread data
-//       recentUnreadConsultations,
-//       recentUnreadContacts,
-//     ] = await Promise.all([
-//       // =========================
-//       // USERS
-//       // =========================
-//       // User.countDocuments(),
-//       // User.countDocuments({ activeStatus: true }),
-//       // User.countDocuments({ activeStatus: false }),
-
-//       // =========================
-//       // BLOGS
-//       // =========================
-//       Blog.countDocuments(),
-//       Blog.countDocuments({ isActive: true }),
-//       Blog.countDocuments({ isActive: false }),
-
-//       // =========================
-//       // PORTFOLIOS
-//       // =========================
-//       Portfolio.countDocuments(),
-//       Portfolio.countDocuments({ activeStatus: true }),
-//       Portfolio.countDocuments({ activeStatus: false }),
-
-//       // =========================
-//       // COMMENTS
-//       // =========================
-//       // Comment.countDocuments(),
-//       // Comment.countDocuments({ isActive: true }),
-//       // Comment.countDocuments({ isActive: false }),
-
-//       // =========================
-//       // GALLERY
-//       // =========================
-//       Gallery.countDocuments(),
-//       Gallery.countDocuments({ isActive: true }),
-//       Gallery.countDocuments({ isActive: false }),
-
-//       // =========================
-//       // HOME SLIDERS
-//       // =========================
-//       HomeSlider.countDocuments(),
-//       HomeSlider.countDocuments({ isActive: true }),
-//       HomeSlider.countDocuments({ isActive: false }),
-
-//       // =========================
-//       // TESTIMONIALS
-//       // =========================
-//       // Testimonials.countDocuments(),
-//       // Testimonials.countDocuments({ isActive: true }),
-//       // Testimonials.countDocuments({ isActive: false }),
-
-//       // =========================
-//       // CONSULTATIONS
-//       // =========================
-//       BookConsultation.countDocuments(),
-//       BookConsultation.countDocuments({ isRead: true }),
-
-//       // $ne true se old records bhi unread mein count honge
-//       BookConsultation.countDocuments({
-//         isRead: { $ne: true },
-//       }),
-
-//       // =========================
-//       // CONTACTS
-//       // =========================
-//       ContactPage.countDocuments(),
-//       ContactPage.countDocuments({ isRead: true }),
-
-//       ContactPage.countDocuments({
-//         isRead: { $ne: true },
-//       }),
-
-//       // =========================
-//       // RECENT UNREAD CONSULTATIONS
-//       // =========================
-//       BookConsultation.find({
-//         isRead: { $ne: true },
-//       })
-//         .select(
-//           "name email phone date slot address remarks status isRead createdAt"
-//         )
-//         .sort({ createdAt: -1 })
-//         .limit(5)
-//         .lean(),
-
-//       // =========================
-//       // RECENT UNREAD CONTACTS
-//       // =========================
-//       ContactPage.find({
-//         isRead: { $ne: true },
-//       })
-//         .select("name email phone subject message isRead createdAt")
-//         .sort({ createdAt: -1 })
-//         .limit(5)
-//         .lean(),
-//     ]);
-
-//     const dashboardData = {
-//       counts: {
-//         // users: {
-//         //   total: totalUsers,
-//         //   active: activeUsers,
-//         //   inactive: inactiveUsers,
-//         // },
-
-//         blogs: {
-//           total: totalBlogs,
-//           active: activeBlogs,
-//           inactive: inactiveBlogs,
-//         },
-
-//         portfolios: {
-//           total: totalPortfolios,
-//           active: activePortfolios,
-//           inactive: inactivePortfolios,
-//         },
-
-      
-//         gallery: {
-//           total: totalGallery,
-//           active: activeGallery,
-//           inactive: inactiveGallery,
-//         },
-
-//         sliders: {
-//           total: totalSliders,
-//           active: activeSliders,
-//           inactive: inactiveSliders,
-//         },
-
-//         // testimonials: {
-//         //   total: totalTestimonials,
-//         //   active: activeTestimonials,
-//         //   inactive: inactiveTestimonials,
-//         // },
-
-//         consultations: {
-//           total: totalConsultations,
-//           read: readConsultations,
-//           unread: unreadConsultations,
-//         },
-
-//         contacts: {
-//           total: totalContacts,
-//           read: readContacts,
-//           unread: unreadContacts,
-//         },
-//       },
-
-//       recent: {
-//         unreadConsultations: recentUnreadConsultations,
-//         unreadContacts: recentUnreadContacts,
-//       },
-//     };
-
-//     return res
-//       .status(200)
-//       .json(
-//         new apiResponse(
-//           200,
-//           dashboardData,
-//           "Dashboard data fetched successfully"
-//         )
-//       );
-//   } catch (error) {
-//     console.error("Dashboard controller error:", error);
-
-//     return res
-//       .status(500)
-//       .json(
-//         new apiResponse(
-//           500,
-//           null,
-//           error.message || "Failed to fetch dashboard data"
-//         )
-//       );
-//   }
-// });
-
-// export { getDashboardStats };
-
-import Blog from "../models/Blog.modal.js";
-import BookConsultation from "../models/BookConsultation.modal.js";
-import ContactPage from "../models/ContactPage.modal.js";
-import Gallery from "../models/Gallery.modal.js";
-import HomeSlider from "../models/HomeSlider.modal.js";
-import Portfolio from "../models/Portfolio.modal.js";
-import Query from "../models/queryModel.js";
+import HomeBanner from "../models/HomeBanner.modal.js";
+import Category from "../models/Category.modal.js";
+import Product from "../models/Product.modal.js";
+import FAQ from "../models/FAQ.modal.js";
+import SiteSetting from "../models/SiteSetting.modal.js";
+import Enquiry from "../models/Enquiry.modal.js";
+import User from "../models/User.modal.js";
 
 import { apiResponse } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asynchandler.js";
 
-// GET /api/dashboard
-const getDashboardStats = asyncHandler(async (req, res) => {
-  try {
+/* =====================================================
+   DATE HELPERS
+===================================================== */
+
+const getTodayRange = () => {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
+
+  return {
+    start,
+    end,
+  };
+};
+
+const getCurrentMonthRange = () => {
+  const now = new Date();
+
+  const start = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    1
+  );
+
+  const end = new Date(
+    now.getFullYear(),
+    now.getMonth() + 1,
+    0,
+    23,
+    59,
+    59,
+    999
+  );
+
+  return {
+    start,
+    end,
+  };
+};
+
+/* =====================================================
+   GET COMPLETE DASHBOARD SUMMARY
+===================================================== */
+
+const getDashboardSummary = asyncHandler(
+  async (req, res) => {
+    const todayRange = getTodayRange();
+    const monthRange = getCurrentMonthRange();
+
     const [
-      // Blogs
-      totalBlogs,
-      activeBlogs,
-      inactiveBlogs,
+      /* Home banners */
+      totalHomeBanners,
+      activeHomeBanners,
+      inactiveHomeBanners,
 
-      // Existing Portfolio projects
-      totalPortfolios,
-      activePortfolios,
-      inactivePortfolios,
+      /* Categories */
+      totalCategories,
+      activeCategories,
+      inactiveCategories,
+      homeCategories,
 
-      // New portfolio download queries
-      totalQueries,
+      /* Products */
+      totalProducts,
+      activeProducts,
+      inactiveProducts,
+      featuredProducts,
+      homeProducts,
 
-      // Gallery
-      totalGallery,
-      activeGallery,
-      inactiveGallery,
+      /* FAQs */
+      totalFAQs,
+      activeFAQs,
+      inactiveFAQs,
 
-      // Home sliders
-      totalSliders,
-      activeSliders,
-      inactiveSliders,
+      /* Site settings */
+      totalSiteSettings,
+      activeSiteSettings,
 
-      // Consultations
-      totalConsultations,
-      readConsultations,
-      unreadConsultations,
+      /* Enquiries */
+      totalEnquiries,
+      unreadEnquiries,
+      readEnquiries,
+      newEnquiries,
+      contactedEnquiries,
+      discussionEnquiries,
+      quotedEnquiries,
+      closedEnquiries,
+      rejectedEnquiries,
+      todayEnquiries,
+      monthlyEnquiries,
 
-      // Contacts
-      totalContacts,
-      readContacts,
-      unreadContacts,
+      /* Users */
+      totalUsers,
+      adminUsers,
+      normalUsers,
+      activeUsers,
+      inactiveUsers,
 
-      // Recent unread records
-      recentUnreadConsultations,
-      recentUnreadContacts,
+      /* Recent data */
+      recentEnquiries,
+      recentProducts,
+      recentBanners,
     ] = await Promise.all([
-      // =========================
-      // BLOGS
-      // =========================
-      Blog.countDocuments(),
-      Blog.countDocuments({ isActive: true }),
-      Blog.countDocuments({ isActive: false }),
-
-      // =========================
-      // EXISTING PORTFOLIOS
-      // =========================
-      Portfolio.countDocuments(),
-      Portfolio.countDocuments({ activeStatus: true }),
-      Portfolio.countDocuments({ activeStatus: false }),
-
-      // =========================
-      // PORTFOLIO DOWNLOAD QUERIES
-      // =========================
-      Query.countDocuments(),
-
-      // =========================
-      // GALLERY
-      // =========================
-      Gallery.countDocuments(),
-      Gallery.countDocuments({ isActive: true }),
-      Gallery.countDocuments({ isActive: false }),
-
-      // =========================
-      // HOME SLIDERS
-      // =========================
-      HomeSlider.countDocuments(),
-      HomeSlider.countDocuments({ isActive: true }),
-      HomeSlider.countDocuments({ isActive: false }),
-
-      // =========================
-      // CONSULTATIONS
-      // =========================
-      BookConsultation.countDocuments(),
-      BookConsultation.countDocuments({ isRead: true }),
-      BookConsultation.countDocuments({
-        isRead: { $ne: true },
+      /* Home banners */
+      HomeBanner.countDocuments(),
+      HomeBanner.countDocuments({
+        isActive: true,
+      }),
+      HomeBanner.countDocuments({
+        isActive: false,
       }),
 
-      // =========================
-      // CONTACTS
-      // =========================
-      ContactPage.countDocuments(),
-      ContactPage.countDocuments({ isRead: true }),
-      ContactPage.countDocuments({
-        isRead: { $ne: true },
+      /* Categories */
+      Category.countDocuments(),
+      Category.countDocuments({
+        isActive: true,
+      }),
+      Category.countDocuments({
+        isActive: false,
+      }),
+      Category.countDocuments({
+        isActive: true,
+        showOnHome: true,
       }),
 
-      // =========================
-      // RECENT UNREAD CONSULTATIONS
-      // =========================
-      BookConsultation.find({
-        isRead: { $ne: true },
-      })
-        .select(
-          "name email phone date slot address remarks status isRead createdAt"
-        )
-        .sort({ createdAt: -1 })
+      /* Products */
+      Product.countDocuments(),
+      Product.countDocuments({
+        isActive: true,
+      }),
+      Product.countDocuments({
+        isActive: false,
+      }),
+      Product.countDocuments({
+        isActive: true,
+        isFeatured: true,
+      }),
+      Product.countDocuments({
+        isActive: true,
+        showOnHome: true,
+      }),
+
+      /* FAQs */
+      FAQ.countDocuments(),
+      FAQ.countDocuments({
+        isActive: true,
+      }),
+      FAQ.countDocuments({
+        isActive: false,
+      }),
+
+      /* Site settings */
+      SiteSetting.countDocuments(),
+      SiteSetting.countDocuments({
+        isActive: true,
+      }),
+
+      /* Enquiries */
+      Enquiry.countDocuments(),
+
+      Enquiry.countDocuments({
+        isRead: false,
+      }),
+
+      Enquiry.countDocuments({
+        isRead: true,
+      }),
+
+      Enquiry.countDocuments({
+        status: "New",
+      }),
+
+      Enquiry.countDocuments({
+        status: "Contacted",
+      }),
+
+      Enquiry.countDocuments({
+        status: "In Discussion",
+      }),
+
+      Enquiry.countDocuments({
+        status: "Quoted",
+      }),
+
+      Enquiry.countDocuments({
+        status: "Closed",
+      }),
+
+      Enquiry.countDocuments({
+        status: "Rejected",
+      }),
+
+      Enquiry.countDocuments({
+        createdAt: {
+          $gte: todayRange.start,
+          $lte: todayRange.end,
+        },
+      }),
+
+      Enquiry.countDocuments({
+        createdAt: {
+          $gte: monthRange.start,
+          $lte: monthRange.end,
+        },
+      }),
+
+      /* Users */
+      User.countDocuments(),
+
+      User.countDocuments({
+        role: "Admin",
+      }),
+
+      User.countDocuments({
+        role: "User",
+      }),
+
+      User.countDocuments({
+        activeStatus: true,
+      }),
+
+      User.countDocuments({
+        activeStatus: false,
+      }),
+
+      /* Recent enquiries */
+      Enquiry.find()
+        .sort({
+          createdAt: -1,
+        })
         .limit(5)
+        .select(
+          "name company email phone product source status isRead createdAt"
+        )
         .lean(),
 
-      // =========================
-      // RECENT UNREAD CONTACTS
-      // =========================
-      ContactPage.find({
-        isRead: { $ne: true },
-      })
-        .select(
-          "name email phone subject message isRead createdAt"
+      /* Recent products */
+      Product.find()
+        .populate(
+          "category",
+          "name slug"
         )
-        .sort({ createdAt: -1 })
+        .sort({
+          createdAt: -1,
+        })
         .limit(5)
+        .select(
+          "name slug category mainImage isActive isFeatured showOnHome createdAt"
+        )
+        .lean(),
+
+      /* Recent banners */
+      HomeBanner.find()
+        .sort({
+          createdAt: -1,
+        })
+        .limit(5)
+        .select(
+          "title desktopImage order isActive createdAt"
+        )
         .lean(),
     ]);
 
     const dashboardData = {
-      counts: {
-        blogs: {
-          total: totalBlogs,
-          active: activeBlogs,
-          inactive: inactiveBlogs,
-        },
+      overview: {
+        homeBanners: totalHomeBanners,
+        categories: totalCategories,
+        products: totalProducts,
+        faqs: totalFAQs,
+        enquiries: totalEnquiries,
+        users: totalUsers,
+      },
 
-        // Existing portfolio project count remains unchanged
-        portfolios: {
-          total: totalPortfolios,
-          active: activePortfolios,
-          inactive: inactivePortfolios,
-        },
+      homeBanners: {
+        total: totalHomeBanners,
+        active: activeHomeBanners,
+        inactive: inactiveHomeBanners,
+      },
 
-        // New count from the Query collection
-        queries: {
-          total: totalQueries,
-        },
+      categories: {
+        total: totalCategories,
+        active: activeCategories,
+        inactive: inactiveCategories,
+        showOnHome: homeCategories,
+      },
 
-        gallery: {
-          total: totalGallery,
-          active: activeGallery,
-          inactive: inactiveGallery,
-        },
+      products: {
+        total: totalProducts,
+        active: activeProducts,
+        inactive: inactiveProducts,
+        featured: featuredProducts,
+        showOnHome: homeProducts,
+      },
 
-        sliders: {
-          total: totalSliders,
-          active: activeSliders,
-          inactive: inactiveSliders,
-        },
+      faqs: {
+        total: totalFAQs,
+        active: activeFAQs,
+        inactive: inactiveFAQs,
+      },
 
-        consultations: {
-          total: totalConsultations,
-          read: readConsultations,
-          unread: unreadConsultations,
-        },
+      siteSettings: {
+        total: totalSiteSettings,
+        active: activeSiteSettings,
+        configured:
+          totalSiteSettings > 0,
+      },
 
-        contacts: {
-          total: totalContacts,
-          read: readContacts,
-          unread: unreadContacts,
+      enquiries: {
+        total: totalEnquiries,
+        unread: unreadEnquiries,
+        read: readEnquiries,
+
+        today: todayEnquiries,
+        currentMonth: monthlyEnquiries,
+
+        statuses: {
+          new: newEnquiries,
+          contacted: contactedEnquiries,
+          inDiscussion:
+            discussionEnquiries,
+          quoted: quotedEnquiries,
+          closed: closedEnquiries,
+          rejected: rejectedEnquiries,
         },
       },
 
+      users: {
+        total: totalUsers,
+        admins: adminUsers,
+        users: normalUsers,
+        active: activeUsers,
+        inactive: inactiveUsers,
+      },
+
       recent: {
-        unreadConsultations: recentUnreadConsultations,
-        unreadContacts: recentUnreadContacts,
+        enquiries: recentEnquiries,
+        products: recentProducts,
+        homeBanners: recentBanners,
       },
     };
 
@@ -441,20 +355,12 @@ const getDashboardStats = asyncHandler(async (req, res) => {
       new apiResponse(
         200,
         dashboardData,
-        "Dashboard data fetched successfully"
-      )
-    );
-  } catch (error) {
-    console.error("Dashboard controller error:", error);
-
-    return res.status(500).json(
-      new apiResponse(
-        500,
-        null,
-        error.message || "Failed to fetch dashboard data"
+        "Dashboard summary fetched successfully"
       )
     );
   }
-});
+);
 
-export { getDashboardStats };
+export {
+  getDashboardSummary,
+};

@@ -1,612 +1,1948 @@
+// import bcrypt from "bcrypt";
+// import jwt from "jsonwebtoken";
+
+// import User from "../models/User.modal.js";
+// import { apiResponse } from "../utils/apiResponse.js";
+// import { asyncHandler } from "../utils/asynchandler.js";
+// import { generateOTP } from "../utils/generateOTP.js";
+// import { sendWhatsappOTP } from "../utils/sendOTP.js";
+
+// const OTP_EXPIRATION_TIME = 5 * 60 * 1000;
+
+// const generateUserToken = (user) => {
+//   return jwt.sign(
+//     {
+//       userId: user._id,
+//       role: user.role,
+//       accountType: user.role,
+//     },
+//     process.env.JWT_SECRET,
+//     {
+//       expiresIn: "7d",
+//     }
+//   );
+// };
+
+// const getSafeUserData = (user, token = null) => {
+//   const data = {
+//     _id: user._id,
+//     phone: user.phone,
+//     name: user.name,
+//     email: user.email,
+//     gender: user.gender,
+//     role: user.role,
+//     accountType: user.role,
+//     dob: user.dob,
+//     profilepic: user.profilepic,
+//     occupation: user.occupation,
+//     address: user.address,
+//     activeStatus: user.activeStatus,
+//     isNew: user.isNew,
+//     createdAt: user.createdAt,
+//     updatedAt: user.updatedAt,
+//   };
+
+//   if (token) {
+//     data.authToken = token;
+//   }
+
+//   return data;
+// };
+
+// /* =====================================================
+//    REGISTER OR LOGIN USING OTP
+// ===================================================== */
+
+// const registerOrLogin = asyncHandler(async (req, res) => {
+//   const phone = String(req.body.phone || "").trim();
+
+//   if (!phone) {
+//     return res
+//       .status(400)
+//       .json(new apiResponse(400, null, "Phone number is required"));
+//   }
+
+//   if (!/^[0-9]{10}$/.test(phone)) {
+//     return res
+//       .status(400)
+//       .json(
+//         new apiResponse(
+//           400,
+//           null,
+//           "Phone number must contain exactly 10 digits"
+//         )
+//       );
+//   }
+
+//   let user = await User.findOne({ phone });
+
+//   const otp = phone === "1111111111" ? "0101" : generateOTP();
+
+//   const otpExpiration = new Date(
+//     Date.now() + OTP_EXPIRATION_TIME
+//   );
+
+//   await sendWhatsappOTP(phone, otp);
+
+//   if (user) {
+//     if (user.activeStatus === false) {
+//       return res
+//         .status(403)
+//         .json(
+//           new apiResponse(
+//             403,
+//             null,
+//             "Your account is inactive"
+//           )
+//         );
+//     }
+
+//     user.otp = otp;
+//     user.otpExpiration = otpExpiration;
+
+//     await user.save();
+
+//     return res.status(200).json(
+//       new apiResponse(
+//         200,
+//         {
+//           _id: user._id,
+//           phone: user.phone,
+//           isNew: user.isNew,
+//         },
+//         "OTP sent successfully"
+//       )
+//     );
+//   }
+
+//   user = await User.create({
+//     phone,
+//     otp,
+//     otpExpiration,
+//     role: "User",
+//     isNew: true,
+//     activeStatus: true,
+//   });
+
+//   return res.status(201).json(
+//     new apiResponse(
+//       201,
+//       {
+//         _id: user._id,
+//         phone: user.phone,
+//         isNew: user.isNew,
+//       },
+//       "User created and OTP sent successfully"
+//     )
+//   );
+// });
+
+// /* =====================================================
+//    VERIFY OTP
+// ===================================================== */
+
+// const verifyOtp = asyncHandler(async (req, res) => {
+//   const phone = String(req.body.phone || "").trim();
+//   const otp = String(req.body.otp || "").trim();
+
+//   if (!phone || !otp) {
+//     return res
+//       .status(400)
+//       .json(
+//         new apiResponse(
+//           400,
+//           null,
+//           "Phone number and OTP are required"
+//         )
+//       );
+//   }
+
+//   const user = await User.findOne({ phone });
+
+//   if (!user) {
+//     return res
+//       .status(404)
+//       .json(new apiResponse(404, null, "User not found"));
+//   }
+
+//   if (user.activeStatus === false) {
+//     return res
+//       .status(403)
+//       .json(
+//         new apiResponse(
+//           403,
+//           null,
+//           "Your account is inactive"
+//         )
+//       );
+//   }
+
+//   if (!user.otp || user.otp !== otp) {
+//     return res
+//       .status(400)
+//       .json(new apiResponse(400, null, "Invalid OTP"));
+//   }
+
+//   if (
+//     user.otpExpiration &&
+//     new Date() > new Date(user.otpExpiration)
+//   ) {
+//     return res
+//       .status(400)
+//       .json(
+//         new apiResponse(
+//           400,
+//           null,
+//           "OTP has expired. Please request a new OTP"
+//         )
+//       );
+//   }
+
+//   const token = generateUserToken(user);
+
+//   user.otp = undefined;
+//   user.otpExpiration = undefined;
+//   user.authToken = token;
+
+//   await user.save();
+
+//   return res.status(200).json(
+//     new apiResponse(
+//       200,
+//       getSafeUserData(user, token),
+//       "OTP verified successfully"
+//     )
+//   );
+// });
+
+// /* =====================================================
+//    RESEND OTP
+// ===================================================== */
+
+// const resendOtp = asyncHandler(async (req, res) => {
+//   const phone = String(req.body.phone || "").trim();
+
+//   if (!phone) {
+//     return res
+//       .status(400)
+//       .json(
+//         new apiResponse(
+//           400,
+//           null,
+//           "Phone number is required"
+//         )
+//       );
+//   }
+
+//   const user = await User.findOne({ phone });
+
+//   if (!user) {
+//     return res
+//       .status(404)
+//       .json(new apiResponse(404, null, "User not found"));
+//   }
+
+//   if (user.activeStatus === false) {
+//     return res
+//       .status(403)
+//       .json(
+//         new apiResponse(
+//           403,
+//           null,
+//           "Your account is inactive"
+//         )
+//       );
+//   }
+
+//   const otp = phone === "1111111111" ? "0101" : generateOTP();
+
+//   user.otp = otp;
+//   user.otpExpiration = new Date(
+//     Date.now() + OTP_EXPIRATION_TIME
+//   );
+
+//   await user.save();
+//   await sendWhatsappOTP(phone, otp);
+
+//   return res.status(200).json(
+//     new apiResponse(
+//       200,
+//       {
+//         phone: user.phone,
+//       },
+//       "OTP resent successfully"
+//     )
+//   );
+// });
+
+// /* =====================================================
+//    LOGIN WITH PASSWORD
+// ===================================================== */
+
+// const loginWithPassword = asyncHandler(async (req, res) => {
+//   const phone = String(req.body.phone || "").trim();
+//   const password = String(req.body.password || "");
+
+//   if (!phone || !password) {
+//     return res
+//       .status(400)
+//       .json(
+//         new apiResponse(
+//           400,
+//           null,
+//           "Phone number and password are required"
+//         )
+//       );
+//   }
+
+//   const user = await User.findOne({ phone });
+
+//   if (!user) {
+//     return res
+//       .status(404)
+//       .json(new apiResponse(404, null, "User not found"));
+//   }
+
+//   if (user.activeStatus === false) {
+//     return res
+//       .status(403)
+//       .json(
+//         new apiResponse(
+//           403,
+//           null,
+//           "Your account is inactive"
+//         )
+//       );
+//   }
+
+//   if (!user.password) {
+//     return res
+//       .status(400)
+//       .json(
+//         new apiResponse(
+//           400,
+//           null,
+//           "Password has not been created for this user"
+//         )
+//       );
+//   }
+
+//   const isPasswordCorrect = await bcrypt.compare(
+//     password,
+//     user.password
+//   );
+
+//   if (!isPasswordCorrect) {
+//     return res
+//       .status(401)
+//       .json(
+//         new apiResponse(
+//           401,
+//           null,
+//           "Invalid phone number or password"
+//         )
+//       );
+//   }
+
+//   const token = generateUserToken(user);
+
+//   user.authToken = token;
+//   await user.save();
+
+//   return res.status(200).json(
+//     new apiResponse(
+//       200,
+//       getSafeUserData(user, token),
+//       "Login successful"
+//     )
+//   );
+// });
+
+// /* =====================================================
+//    CREATE USER
+// ===================================================== */
+
+// const createUser = asyncHandler(async (req, res) => {
+//   const {
+//     name,
+//     phone,
+//     role = "User",
+//     email,
+//     gender,
+//     dob,
+//     address,
+//     password,
+//     occupation,
+//     activeStatus = true,
+//   } = req.body;
+
+//   const normalizedPhone = String(phone || "").trim();
+
+//   if (!normalizedPhone) {
+//     return res
+//       .status(400)
+//       .json(
+//         new apiResponse(
+//           400,
+//           null,
+//           "Phone number is required"
+//         )
+//       );
+//   }
+
+//   if (!/^[0-9]{10}$/.test(normalizedPhone)) {
+//     return res
+//       .status(400)
+//       .json(
+//         new apiResponse(
+//           400,
+//           null,
+//           "Phone number must contain exactly 10 digits"
+//         )
+//       );
+//   }
+
+//   if (!password) {
+//     return res
+//       .status(400)
+//       .json(
+//         new apiResponse(
+//           400,
+//           null,
+//           "Password is required"
+//         )
+//       );
+//   }
+
+//   if (!["User", "Admin"].includes(role)) {
+//     return res
+//       .status(400)
+//       .json(
+//         new apiResponse(
+//           400,
+//           null,
+//           "Role must be User or Admin"
+//         )
+//       );
+//   }
+
+//   const existingUser = await User.findOne({
+//     $or: [
+//       { phone: normalizedPhone },
+//       ...(email ? [{ email: email.toLowerCase().trim() }] : []),
+//     ],
+//   });
+
+//   if (existingUser) {
+//     return res
+//       .status(409)
+//       .json(
+//         new apiResponse(
+//           409,
+//           null,
+//           "User with this phone number or email already exists"
+//         )
+//       );
+//   }
+
+//   const hashedPassword = await bcrypt.hash(password, 10);
+
+//   const user = await User.create({
+//     name: name?.trim(),
+//     phone: normalizedPhone,
+//     role,
+//     email: email?.toLowerCase().trim(),
+//     gender,
+//     dob,
+//     address,
+//     occupation,
+//     password: hashedPassword,
+//     activeStatus,
+//     isNew: false,
+//   });
+
+//   return res.status(201).json(
+//     new apiResponse(
+//       201,
+//       getSafeUserData(user),
+//       "User created successfully"
+//     )
+//   );
+// });
+
+// /* =====================================================
+//    GET ALL USERS
+// ===================================================== */
+
+// const getAllUsers = asyncHandler(async (req, res) => {
+//   const {
+//     isPagination = "true",
+//     page = 1,
+//     limit = 10,
+//     search = "",
+//     sortBy = "recent",
+//     role,
+//   } = req.query;
+
+//   const pageNumber = Math.max(1, Number(page) || 1);
+
+//   const limitNumber = Math.min(
+//     100,
+//     Math.max(1, Number(limit) || 10)
+//   );
+
+//   const filter = {};
+
+//   if (role && ["User", "Admin"].includes(role)) {
+//     filter.role = role;
+//   }
+
+//   if (search.trim()) {
+//     const searchRegex = new RegExp(search.trim(), "i");
+
+//     filter.$or = [
+//       { name: searchRegex },
+//       { phone: searchRegex },
+//       { email: searchRegex },
+//     ];
+//   }
+
+//   const sort =
+//     sortBy === "oldest"
+//       ? { createdAt: 1 }
+//       : { createdAt: -1 };
+
+//   const totalUsers = await User.countDocuments(filter);
+
+//   let query = User.find(filter)
+//     .select("-password -otp -otpExpiration -authToken")
+//     .sort(sort);
+
+//   if (isPagination === "true") {
+//     query = query
+//       .skip((pageNumber - 1) * limitNumber)
+//       .limit(limitNumber);
+//   }
+
+//   const users = await query.lean();
+
+//   return res.status(200).json(
+//     new apiResponse(
+//       200,
+//       {
+//         users,
+//         totalUsers,
+//         totalPages:
+//           isPagination === "true"
+//             ? Math.ceil(totalUsers / limitNumber)
+//             : 1,
+//         currentPage: pageNumber,
+//       },
+//       "Users fetched successfully"
+//     )
+//   );
+// });
+
+// /* =====================================================
+//    GET LOGGED-IN USER PROFILE
+// ===================================================== */
+
+// const getProfile = asyncHandler(async (req, res) => {
+//   return res.status(200).json(
+//     new apiResponse(
+//       200,
+//       req.user,
+//       "Profile fetched successfully"
+//     )
+//   );
+// });
+
+// /* =====================================================
+//    UPDATE USER
+// ===================================================== */
+
+// const updateUserById = asyncHandler(async (req, res) => {
+//   const { id } = req.params;
+
+//   const user = await User.findById(id);
+
+//   if (!user) {
+//     return res
+//       .status(404)
+//       .json(new apiResponse(404, null, "User not found"));
+//   }
+
+//   const allowedFields = [
+//     "name",
+//     "email",
+//     "gender",
+//     "dob",
+//     "profilepic",
+//     "occupation",
+//     "address",
+//     "activeStatus",
+//   ];
+
+//   allowedFields.forEach((field) => {
+//     if (req.body[field] !== undefined) {
+//       user[field] = req.body[field];
+//     }
+//   });
+
+//   user.isNew = false;
+
+//   await user.save();
+
+//   return res.status(200).json(
+//     new apiResponse(
+//       200,
+//       getSafeUserData(user),
+//       "User updated successfully"
+//     )
+//   );
+// });
+
+// /* =====================================================
+//    UPDATE USER ROLE
+// ===================================================== */
+
+// const updateUserRole = asyncHandler(async (req, res) => {
+//   const { userId } = req.params;
+//   const { role } = req.body;
+
+//   if (!["User", "Admin"].includes(role)) {
+//     return res
+//       .status(400)
+//       .json(
+//         new apiResponse(
+//           400,
+//           null,
+//           "Role must be User or Admin"
+//         )
+//       );
+//   }
+
+//   const user = await User.findById(userId);
+
+//   if (!user) {
+//     return res
+//       .status(404)
+//       .json(new apiResponse(404, null, "User not found"));
+//   }
+
+//   user.role = role;
+
+//   await user.save();
+
+//   return res.status(200).json(
+//     new apiResponse(
+//       200,
+//       {
+//         userId: user._id,
+//         role: user.role,
+//       },
+//       "User role updated successfully"
+//     )
+//   );
+// });
+
+// /* =====================================================
+//    CREATE PASSWORD
+// ===================================================== */
+
+// const createPassword = asyncHandler(async (req, res) => {
+//   const phone = String(req.body.phone || "").trim();
+//   const password = String(req.body.password || "");
+
+//   if (!phone || !password) {
+//     return res
+//       .status(400)
+//       .json(
+//         new apiResponse(
+//           400,
+//           null,
+//           "Phone number and password are required"
+//         )
+//       );
+//   }
+
+//   const user = await User.findOne({ phone });
+
+//   if (!user) {
+//     return res
+//       .status(404)
+//       .json(new apiResponse(404, null, "User not found"));
+//   }
+
+//   if (user.password) {
+//     return res
+//       .status(400)
+//       .json(
+//         new apiResponse(
+//           400,
+//           null,
+//           "Password is already set for this user"
+//         )
+//       );
+//   }
+
+//   user.password = await bcrypt.hash(password, 10);
+//   user.isNew = false;
+
+//   await user.save();
+
+//   return res.status(200).json(
+//     new apiResponse(
+//       200,
+//       null,
+//       "Password created successfully"
+//     )
+//   );
+// });
+
+// /* =====================================================
+//    UPDATE PASSWORD
+// ===================================================== */
+
+// const updatePassword = asyncHandler(async (req, res) => {
+//   const phone = String(req.body.phone || "").trim();
+//   const oldPassword = String(req.body.oldPassword || "");
+//   const newPassword = String(req.body.newPassword || "");
+
+//   if (!phone || !oldPassword || !newPassword) {
+//     return res
+//       .status(400)
+//       .json(
+//         new apiResponse(
+//           400,
+//           null,
+//           "Phone number, old password and new password are required"
+//         )
+//       );
+//   }
+
+//   const user = await User.findOne({ phone });
+
+//   if (!user) {
+//     return res
+//       .status(404)
+//       .json(new apiResponse(404, null, "User not found"));
+//   }
+
+//   if (!user.password) {
+//     return res
+//       .status(400)
+//       .json(
+//         new apiResponse(
+//           400,
+//           null,
+//           "Password has not been created for this user"
+//         )
+//       );
+//   }
+
+//   const isOldPasswordCorrect = await bcrypt.compare(
+//     oldPassword,
+//     user.password
+//   );
+
+//   if (!isOldPasswordCorrect) {
+//     return res
+//       .status(400)
+//       .json(
+//         new apiResponse(
+//           400,
+//           null,
+//           "Old password is incorrect"
+//         )
+//       );
+//   }
+
+//   user.password = await bcrypt.hash(newPassword, 10);
+
+//   await user.save();
+
+//   return res.status(200).json(
+//     new apiResponse(
+//       200,
+//       null,
+//       "Password updated successfully"
+//     )
+//   );
+// });
+
+// /* =====================================================
+//    RESET PASSWORD
+// ===================================================== */
+
+// const resetPassword = asyncHandler(async (req, res) => {
+//   const phone = String(req.body.phone || "").trim();
+//   const password = String(req.body.password || "");
+
+//   if (!phone || !password) {
+//     return res
+//       .status(400)
+//       .json(
+//         new apiResponse(
+//           400,
+//           null,
+//           "Phone number and new password are required"
+//         )
+//       );
+//   }
+
+//   const user = await User.findOne({ phone });
+
+//   if (!user) {
+//     return res
+//       .status(404)
+//       .json(new apiResponse(404, null, "User not found"));
+//   }
+
+//   user.password = await bcrypt.hash(password, 10);
+//   user.isNew = false;
+
+//   await user.save();
+
+//   return res.status(200).json(
+//     new apiResponse(
+//       200,
+//       null,
+//       "Password reset successfully"
+//     )
+//   );
+// });
+
+// /* =====================================================
+//    DELETE USER
+// ===================================================== */
+
+// const deleteUser = asyncHandler(async (req, res) => {
+//   const { id } = req.params;
+
+//   const user = await User.findById(id);
+
+//   if (!user) {
+//     return res
+//       .status(404)
+//       .json(new apiResponse(404, null, "User not found"));
+//   }
+
+//   await User.findByIdAndDelete(id);
+
+//   return res.status(200).json(
+//     new apiResponse(
+//       200,
+//       null,
+//       "User deleted successfully"
+//     )
+//   );
+// });
+
+// export {
+//   registerOrLogin,
+//   verifyOtp,
+//   resendOtp,
+//   loginWithPassword,
+//   createUser,
+//   getAllUsers,
+//   getProfile,
+//   updateUserById,
+//   updateUserRole,
+//   createPassword,
+//   updatePassword,
+//   resetPassword,
+//   deleteUser,
+// };
+
+
+import mongoose from "mongoose";
+import bcrypt from "bcrypt";
+
 import User from "../models/User.modal.js";
 import { apiResponse } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asynchandler.js";
-import crypto from "crypto";
 import { generateOTP } from "../utils/generateOTP.js";
-
-import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
 import { sendWhatsappOTP } from "../utils/sendOTP.js";
 
 const OTP_EXPIRATION_TIME = 5 * 60 * 1000;
 
-// Register or Login user using phone number & OTP
+/*
+  Supports both field names:
+
+  Old schema:
+  isNew
+
+  Recommended schema:
+  isFirstLogin
+*/
+const FIRST_LOGIN_FIELD = User.schema.path("isFirstLogin")
+  ? "isFirstLogin"
+  : "isNew";
+
+const getFirstLoginStatus = (user) => {
+  if (user?.isFirstLogin !== undefined) {
+    return user.isFirstLogin;
+  }
+
+  if (user?.isNew !== undefined) {
+    return user.isNew;
+  }
+
+  return false;
+};
+
+const setFirstLoginStatus = (user, value) => {
+  user[FIRST_LOGIN_FIELD] = value;
+};
+
+const normalizePhone = (phone) => {
+  return String(phone || "")
+    .replace(/\s+/g, "")
+    .trim();
+};
+
+const isValidPhone = (phone) => {
+  return /^[0-9]{10}$/.test(phone);
+};
+
+const isValidObjectId = (id) => {
+  return mongoose.Types.ObjectId.isValid(id);
+};
+
+const getSafeUserData = (user, authToken = null) => {
+  const data = {
+    _id: user._id,
+    phone: user.phone,
+    name: user.name,
+    email: user.email,
+    gender: user.gender,
+    role: user.role,
+    accountType: user.role,
+    dob: user.dob,
+    profilepic: user.profilepic,
+    occupation: user.occupation,
+    address: user.address,
+    activeStatus: user.activeStatus,
+    isNew: getFirstLoginStatus(user),
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+
+  if (authToken) {
+    data.authToken = authToken;
+  }
+
+  return data;
+};
+
+/* =====================================================
+   REGISTER OR LOGIN WITH OTP
+===================================================== */
+
 const registerOrLogin = asyncHandler(async (req, res) => {
-  const { phone } = req.body;
+  const phone = normalizePhone(req.body.phone);
 
   if (!phone) {
-    return res
-      .status(400)
-      .json(new apiResponse(400, null, "Phone number is required"));
+    return res.status(400).json(
+      new apiResponse(
+        400,
+        null,
+        "Phone number is required"
+      )
+    );
   }
 
-  // Phone number must be exactly 10 digits
-  const phoneRegex = /^[0-9]{10}$/;
-  if (!phoneRegex.test(phone)) {
-    return res
-      .status(400)
-      .json(
-        new apiResponse(400, null, "Phone number must be exactly 10 digits")
-      );
+  if (!isValidPhone(phone)) {
+    return res.status(400).json(
+      new apiResponse(
+        400,
+        null,
+        "Phone number must contain exactly 10 digits"
+      )
+    );
   }
 
-  try {
-    let user = await User.findOne({ phone });
+  let user = await User.findOne({ phone });
 
-    // OTP generate (special case for test number)
-    const otp = phone === "1111111111" ? "0101" : generateOTP();
-    const otpExpiration = new Date(Date.now() + OTP_EXPIRATION_TIME);
+  if (user && user.activeStatus === false) {
+    return res.status(403).json(
+      new apiResponse(
+        403,
+        null,
+        "Your account is inactive"
+      )
+    );
+  }
 
-    await sendWhatsappOTP(phone, otp);
+  const otp =
+    phone === "1111111111"
+      ? "0101"
+      : String(generateOTP());
 
-    if (user) {
-      // ✅ Existing user → update OTP & set isNew = false (just in case)
-      user.otp = otp;
-      user.otpExpiration = otpExpiration;
-      // user.isNew = false;
-      await user.save();
+  const otpExpiration = new Date(
+    Date.now() + OTP_EXPIRATION_TIME
+  );
 
-      return res.status(200).json(
-        new apiResponse(
-          200,
-          {
-            phone,
-            otp,
-            isNew: user.isNew,
-            _id: user._id,
-          },
-          "Existing user - OTP sent successfully"
-        )
-      );
-    }
-
-    // ✅ New user → create and save
-    const newUser = new User({
+  if (!user) {
+    user = new User({
       phone,
       otp,
       otpExpiration,
-      isNew: true,
+      role: "User",
+      activeStatus: true,
+      [FIRST_LOGIN_FIELD]: true,
     });
-
-    await newUser.save();
-
-    return res
-      .status(200)
-      .json(
-        new apiResponse(
-          200,
-          newUser,
-          "New user created - OTP sent successfully"
-        )
-      );
-  } catch (error) {
-    console.error("Error in registerOrLogin:", error);
-    res.status(500).json(new apiResponse(500, null, `Error: ${error.message}`));
-  }
-});
-
-// Verify OTP for user login or registration
-const verifyOtp = asyncHandler(async (req, res) => {
-  const { phone, otp } = req.body;
-
-  if (!phone || !otp) {
-    return res
-      .status(400)
-      .json(new apiResponse(400, null, "Phone number and OTP are required"));
-  }
-
-  try {
-    const user = await User.findOne({ phone });
-
-    if (!user) {
-      return res.status(400).json(new apiResponse(400, null, "User not found"));
-    }
-
-    // if (new Date() > user.otpExpiration) {
-    //   return res.status(400).json(new apiResponse(400, null, "OTP has expired. Please resend the OTP"));
-    // }
-
-    if (user.otp !== otp) {
-      return res.status(400).json(new apiResponse(400, null, "Invalid OTP"));
-    }
-
-    const token = user.generateAuthToken();
-
-    // const userDetails = {
-    //   phone: user.phone,
-    //   accountType: user.accountType,
-    //   accountId: user.accountId,
-    //   authToken: token,
-    //   createdAt: user.createdAt,
-    //   updatedAt: user.updatedAt
-    // };
-    const userDetails = {
-      _id: user._id,
-      phone: user.phone,
-      name: user.name,
-      email: user.email,
-      gender: user.gender,
-      accountType: user.accountType,
-      isNew: user.isNew,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-      authToken: token,
-    };
-
-    res
-      .status(200)
-      .json(new apiResponse(200, userDetails, "OTP verified successfully"));
-  } catch (error) {
-    res.status(500).json(new apiResponse(500, null, `Error: ${error.message}`));
-  }
-});
-
-// Resend OTP to user's phone number
-const resendOtp = asyncHandler(async (req, res) => {
-  const { phone } = req.body;
-
-  if (!phone) {
-    return res
-      .status(400)
-      .json(new apiResponse(400, null, "Phone number is required"));
-  }
-
-  try {
-    const user = await User.findOne({ phone });
-
-    if (!user) {
-      return res.status(400).json(new apiResponse(400, null, "User not found"));
-    }
-
-    // Generate new OTP
-    const otp = generateOTP();
-    const data = await sendWhatsappOTP(phone, otp);
-    const otpExpiration = new Date(Date.now() + OTP_EXPIRATION_TIME); // Set expiration time
-
+  } else {
     user.otp = otp;
     user.otpExpiration = otpExpiration;
-    await user.save();
-
-    const userData = {
-      phone,
-      otp,
-    };
-
-    res
-      .status(200)
-      .json(new apiResponse(200, userData, "OTP resent successfully"));
-  } catch (error) {
-    res.status(500).json(new apiResponse(500, null, `Error: ${error.message}`));
   }
+
+  await user.save();
+
+  /*
+    OTP sending fails hone par registration request ko
+    silently successful mat dikhana.
+  */
+  await sendWhatsappOTP(phone, otp);
+
+  return res.status(user.isNew ? 201 : 200).json(
+    new apiResponse(
+      user.isNew ? 201 : 200,
+      {
+        _id: user._id,
+        phone: user.phone,
+        isNew: getFirstLoginStatus(user),
+      },
+      user.isNew
+        ? "User created and OTP sent successfully"
+        : "OTP sent successfully"
+    )
+  );
 });
 
-// Create a new user (Admin functionality)
-const createUser = asyncHandler(async (req, res) => {
-  const {
-    name,
-    phone,
-    role,  // changed from roll -> role
-    email,
-    gender,
-    dob,
-    address,
-    password,
-    occupation,
-  } = req.body;
+/* =====================================================
+   VERIFY OTP
+===================================================== */
+
+const verifyOtp = asyncHandler(async (req, res) => {
+  const phone = normalizePhone(req.body.phone);
+  const otp = String(req.body.otp || "").trim();
+
+  if (!phone || !otp) {
+    return res.status(400).json(
+      new apiResponse(
+        400,
+        null,
+        "Phone number and OTP are required"
+      )
+    );
+  }
+
+  const user = await User.findOne({ phone }).select(
+    "+authToken"
+  );
+
+  if (!user) {
+    return res.status(404).json(
+      new apiResponse(
+        404,
+        null,
+        "User not found"
+      )
+    );
+  }
+
+  if (user.activeStatus === false) {
+    return res.status(403).json(
+      new apiResponse(
+        403,
+        null,
+        "Your account is inactive"
+      )
+    );
+  }
+
+  if (!user.otp || String(user.otp) !== otp) {
+    return res.status(400).json(
+      new apiResponse(
+        400,
+        null,
+        "Invalid OTP"
+      )
+    );
+  }
+
+  if (
+    !user.otpExpiration ||
+    new Date() > new Date(user.otpExpiration)
+  ) {
+    return res.status(400).json(
+      new apiResponse(
+        400,
+        null,
+        "OTP has expired. Please request a new OTP"
+      )
+    );
+  }
+
+  const token = user.generateAuthToken();
+
+  user.otp = undefined;
+  user.otpExpiration = undefined;
+  user.authToken = token;
+
+  await user.save();
+
+  return res.status(200).json(
+    new apiResponse(
+      200,
+      getSafeUserData(user, token),
+      "OTP verified successfully"
+    )
+  );
+});
+
+/* =====================================================
+   RESEND OTP
+===================================================== */
+
+const resendOtp = asyncHandler(async (req, res) => {
+  const phone = normalizePhone(req.body.phone);
 
   if (!phone) {
-    return res
-      .status(400)
-      .json(new apiResponse(400, null, "Phone number is required"));
-  }
-
-  const phoneRegex = /^[0-9]{10}$/;
-  if (!phoneRegex.test(phone)) {
-    return res
-      .status(400)
-      .json(new apiResponse(400, null, "Phone number must be exactly 10 digits"));
-  }
-
-  try {
-    // Check if user already exists
-    let existingUser = await User.findOne({ phone });
-    if (existingUser) {
-      return res
-        .status(400)
-        .json(new apiResponse(400, null, "User with this phone already exists"));
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Create new user
-    const newUser = new User({
-      phone,
-      name,
-      email,
-      gender,
-      dob,
-      role,  // changed here
-      address,
-      occupation,
-      password: hashedPassword,
-      isNew: false,
-    });
-
-    await newUser.save();
-
-    return res.status(201).json(
+    return res.status(400).json(
       new apiResponse(
-        201,
-        {
-          userId: newUser._id,
-          phone: newUser.phone,
-          name: newUser.name,
-          role: newUser.role,  // changed here
-        },
-        "User created successfully"
+        400,
+        null,
+        "Phone number is required"
       )
     );
-  } catch (error) {
-    console.error("Error creating user:", error);
-    return res.status(500).json(new apiResponse(500, null, `Error: ${error.message}`));
   }
-});
 
-// Get all users with pagination, search, and sorting
-const getAllUsers = asyncHandler(async (req, res) => {
-  try {
-    const {
-      isPagination = "true",
-      page = 1,
-      limit = 10,
-      search,
-      sortBy = "recent",
-    } = req.query;
-
-    const match = {};
-
-    let pipeline = [{ $match: match }];
-
-    // Global text search
-    if (search) {
-      const words = search
-        .trim()
-        .split(/\s+/)
-        .map((word) => new RegExp(word.replace(/’/g, "'"), "i"));
-
-      const orConditions = words.flatMap((regex) => [
-        { name: { $regex: regex } },
-        { phone: { $regex: regex } },
-        { email: { $regex: regex } },
-      ]);
-
-      pipeline.push({ $match: { $or: orConditions } });
-    }
-
-    // Enhanced sort logic
-    if (sortBy === "recent") {
-      pipeline.push({ $sort: { createdAt: -1, _id: -1 } }); // recent entries first
-    } else if (sortBy === "oldest") {
-      pipeline.push({ $sort: { createdAt: 1, _id: 1 } }); // oldest entries first
-    } else {
-      pipeline.push({ $sort: { _id: -1 } }); // fallback
-    }
-
-    // Count total
-    const totalUsersArr = await User.aggregate([
-      ...pipeline,
-      { $count: "count" },
-    ]);
-    const total = totalUsersArr[0]?.count || 0;
-
-    // Pagination
-    if (isPagination === "true") {
-      pipeline.push({ $skip: (page - 1) * limit }, { $limit: parseInt(limit) });
-    }
-
-    const users = await User.aggregate(pipeline);
-
-    res.status(200).json(
+  if (!isValidPhone(phone)) {
+    return res.status(400).json(
       new apiResponse(
-        200,
-        {
-          users,
-          totalUsers: total,
-          totalPages: Math.ceil(total / limit),
-          currentPage: Number(page),
-        },
-        "Users fetched successfully"
+        400,
+        null,
+        "Phone number must contain exactly 10 digits"
       )
     );
-  } catch (error) {
-    res.status(500).json(new apiResponse(500, null, `Error: ${error.message}`));
-  }
-});
-
-// Get user profile
-const getProfile = async (req, res) => {
-  try {
-    const data = req.user;
-    res
-      .status(200)
-      .json(new apiResponse(200, data, "Users fetched successfully"));
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-// Update user by ID
-const updateUserById = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    // Check if user exists
-    let user = await User.findById(id);
-    if (!user) {
-      return res.status(404).json(new apiResponse(404, null, "User not found"));
-    }
-
-    // Update allowed fields dynamically
-    Object.keys(req.body).forEach((key) => {
-      user[key] = req.body[key];
-    });
-    user.isNew = false;
-
-    await user.save();
-
-    res
-      .status(200)
-      .json(new apiResponse(200, user, "User updated successfully"));
-  } catch (error) {
-    res
-      .status(500)
-      .json(
-        new apiResponse(500, null, `Error updating user: ${error.message}`)
-      );
-  }
-});
-
-// Delete user by ID
-const deleteUser = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const getData = await User.findById(id);
-
-    if (!getData) {
-      return res.status(404).json(new apiResponse(404, null, "User not found"));
-    }
-
-    await User.findByIdAndDelete(id);
-
-    res
-      .status(200)
-      .json(new apiResponse(200, null, " user deleted successfully"));
-  } catch (error) {
-    res.status(500).json(new apiResponse(500, null, `Error: ${error.message}`));
-  }
-});
-
-// Login with phone number and password
-const loginWithPassword = asyncHandler(async (req, res) => {
-  const { phone, password } = req.body;
-
-  if (!phone || !password) {
-    return res
-      .status(400)
-      .json(
-        new apiResponse(400, null, "Phone number and password are required")
-      );
-  }
-
-  try {
-    const existingUser = await User.findOne({ phone });
-
-    if (!existingUser) {
-      return res.status(400).json(new apiResponse(400, null, "User not found"));
-    }
-
-    // Check if password is not set for this user
-    if (!existingUser.password) {
-      return res
-        .status(400)
-        .json(new apiResponse(400, null, "Password is not set for this user"));
-    }
-
-    const isPasswordCorrect = await existingUser.matchPassword(password);
-
-    if (!isPasswordCorrect) {
-      return res
-        .status(400)
-        .json(new apiResponse(400, null, "Invalid password"));
-    }
-
-    // Generate a JWT token for login
-    const token = existingUser.generateAuthToken();
-
-    const userData = {
-      _id: existingUser._id,
-      phone: existingUser.phone,
-      name: existingUser.name,
-      email: existingUser.email,
-      gender: existingUser.gender,
-      role: existingUser.role,
-      isNew: existingUser.isNew,
-      createdAt: existingUser.createdAt,
-      updatedAt: existingUser.updatedAt,
-      authToken: token,
-    };
-
-    res.status(200).json(new apiResponse(200, userData, "Login successful"));
-  } catch (error) {
-    res.status(500).json(new apiResponse(500, null, `Error: ${error.message}`));
-  }
-});
-
-// Create password for user
-const createPassword = asyncHandler(async (req, res) => {
-  const { phone, password } = req.body;
-
-  if (!phone || !password) {
-    return res
-      .status(400)
-      .json(
-        new apiResponse(400, null, "Phone number and password are required")
-      );
-  }
-
-  try {
-    const user = await User.findOne({ phone });
-
-    if (!user) {
-      return res.status(400).json(new apiResponse(400, null, "User not found"));
-    }
-
-    // Check if the user has already set the password
-    if (user.password) {
-      return res
-        .status(400)
-        .json(new apiResponse(400, null, "Password already set for this user"));
-    }
-
-    const salt = await bcrypt.genSalt(10); // You can change the number of rounds if needed
-
-    user.password = await bcrypt.hash(password, salt);
-
-    await user.save();
-
-    res
-      .status(200)
-      .json(new apiResponse(200, null, "Password created successfully"));
-  } catch (error) {
-    res.status(500).json(new apiResponse(500, null, `Error: ${error.message}`));
-  }
-});
-
-//reset password for user
-const resetPassword = asyncHandler(async (req, res) => {
-  const { phone, password } = req.body;
-
-  if (!phone || !password) {
-    return res
-      .status(400)
-      .json(
-        new apiResponse(400, null, "Phone number and password are required")
-      );
-  }
-
-  try {
-    const user = await User.findOne({ phone });
-
-    if (!user) {
-      return res.status(400).json(new apiResponse(400, null, "User not found"));
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(password, salt);
-
-    await user.save();
-
-    res
-      .status(200)
-      .json(new apiResponse(200, null, "Password created successfully"));
-  } catch (error) {
-    res.status(500).json(new apiResponse(500, null, `Error: ${error.message}`));
-  }
-});
-
-// Update password for user
-const updatePassword = asyncHandler(async (req, res) => {
-  const { phone, oldPassword, newPassword } = req.body;
-
-  if (!phone || !oldPassword || !newPassword) {
-    return res
-      .status(400)
-      .json(
-        new apiResponse(
-          400,
-          null,
-          "Phone number, old password, and new password are required"
-        )
-      );
   }
 
   const user = await User.findOne({ phone });
 
   if (!user) {
-    return res.status(400).json(new apiResponse(400, null, "User not found"));
+    return res.status(404).json(
+      new apiResponse(
+        404,
+        null,
+        "User not found"
+      )
+    );
   }
 
-  // Check if the old password matches
-  const isOldPasswordCorrect = await user.matchPassword(oldPassword);
-  if (!isOldPasswordCorrect) {
-    return res
-      .status(400)
-      .json(new apiResponse(400, null, "Invalid old password"));
+  if (user.activeStatus === false) {
+    return res.status(403).json(
+      new apiResponse(
+        403,
+        null,
+        "Your account is inactive"
+      )
+    );
   }
 
-  // Hash and update with new password
-  const salt = await bcrypt.genSalt(10);
-  user.password = await bcrypt.hash(newPassword, salt);
+  const otp =
+    phone === "1111111111"
+      ? "0101"
+      : String(generateOTP());
+
+  user.otp = otp;
+  user.otpExpiration = new Date(
+    Date.now() + OTP_EXPIRATION_TIME
+  );
 
   await user.save();
+  await sendWhatsappOTP(phone, otp);
 
-  res
-    .status(200)
-    .json(new apiResponse(200, null, "Password updated successfully"));
+  return res.status(200).json(
+    new apiResponse(
+      200,
+      {
+        phone: user.phone,
+      },
+      "OTP resent successfully"
+    )
+  );
 });
 
-const updateUserRole = asyncHandler(async (req, res) => {
-  const { userId } = req.params;
-  const { role } = req.body;
+/* =====================================================
+   LOGIN WITH PASSWORD
+===================================================== */
 
-  if (!userId || !role) {
-    return res
-      .status(400)
-      .json(new apiResponse(400, null, "User ID and role are required"));
+const loginWithPassword = asyncHandler(
+  async (req, res) => {
+    const phone = normalizePhone(req.body.phone);
+    const password = String(
+      req.body.password || ""
+    );
+
+    if (!phone || !password) {
+      return res.status(400).json(
+        new apiResponse(
+          400,
+          null,
+          "Phone number and password are required"
+        )
+      );
+    }
+
+    /*
+      Important:
+
+      User model mein password select:false hai,
+      isliye +password use karna necessary hai.
+    */
+    const user = await User.findOne({ phone }).select(
+      "+password +authToken"
+    );
+
+    if (!user) {
+      return res.status(404).json(
+        new apiResponse(
+          404,
+          null,
+          "User not found"
+        )
+      );
+    }
+
+    if (user.activeStatus === false) {
+      return res.status(403).json(
+        new apiResponse(
+          403,
+          null,
+          "Your account is inactive"
+        )
+      );
+    }
+
+    if (!user.password) {
+      return res.status(400).json(
+        new apiResponse(
+          400,
+          null,
+          "Password has not been created for this user"
+        )
+      );
+    }
+
+    const isPasswordCorrect =
+      await user.matchPassword(password);
+
+    if (!isPasswordCorrect) {
+      return res.status(401).json(
+        new apiResponse(
+          401,
+          null,
+          "Invalid phone number or password"
+        )
+      );
+    }
+
+    const token = user.generateAuthToken();
+
+    user.authToken = token;
+
+    await user.save();
+
+    return res.status(200).json(
+      new apiResponse(
+        200,
+        getSafeUserData(user, token),
+        "Login successful"
+      )
+    );
+  }
+);
+
+/* =====================================================
+   CREATE USER
+===================================================== */
+
+const createUser = asyncHandler(async (req, res) => {
+  const {
+    name,
+    email,
+    gender,
+    dob,
+    role = "User",
+    address,
+    password,
+    occupation,
+    profilepic,
+    activeStatus = true,
+  } = req.body;
+
+  const phone = normalizePhone(req.body.phone);
+
+  if (!phone) {
+    return res.status(400).json(
+      new apiResponse(
+        400,
+        null,
+        "Phone number is required"
+      )
+    );
+  }
+
+  if (!isValidPhone(phone)) {
+    return res.status(400).json(
+      new apiResponse(
+        400,
+        null,
+        "Phone number must contain exactly 10 digits"
+      )
+    );
+  }
+
+  if (!password) {
+    return res.status(400).json(
+      new apiResponse(
+        400,
+        null,
+        "Password is required"
+      )
+    );
+  }
+
+  if (String(password).length < 6) {
+    return res.status(400).json(
+      new apiResponse(
+        400,
+        null,
+        "Password must contain at least 6 characters"
+      )
+    );
   }
 
   if (!["User", "Admin"].includes(role)) {
-    return res
-      .status(400)
-      .json(new apiResponse(400, null, "Invalid role value"));
-  }
-
-  const user = await User.findById(userId);
-
-  if (!user) {
-    return res.status(404).json(new apiResponse(404, null, "User not found"));
-  }
-
-  user.role = role;
-  await user.save();
-
-  res
-    .status(200)
-    .json(
+    return res.status(400).json(
       new apiResponse(
-        200,
-        { userId: user._id, role: user.role },
-        "Role updated successfully"
+        400,
+        null,
+        "Role must be User or Admin"
       )
     );
+  }
+
+  const normalizedEmail = email
+    ? String(email).trim().toLowerCase()
+    : undefined;
+
+  const duplicateConditions = [{ phone }];
+
+  if (normalizedEmail) {
+    duplicateConditions.push({
+      email: normalizedEmail,
+    });
+  }
+
+  const existingUser = await User.findOne({
+    $or: duplicateConditions,
+  });
+
+  if (existingUser) {
+    return res.status(409).json(
+      new apiResponse(
+        409,
+        null,
+        "User with this phone number or email already exists"
+      )
+    );
+  }
+
+  const hashedPassword = await bcrypt.hash(
+    String(password),
+    10
+  );
+
+  const newUser = await User.create({
+    phone,
+    name: name
+      ? String(name).trim()
+      : undefined,
+    email: normalizedEmail,
+    gender,
+    dob,
+    role,
+    address,
+    occupation,
+    profilepic,
+    password: hashedPassword,
+    activeStatus:
+      activeStatus === false ||
+      String(activeStatus).toLowerCase() === "false"
+        ? false
+        : true,
+    [FIRST_LOGIN_FIELD]: false,
+  });
+
+  return res.status(201).json(
+    new apiResponse(
+      201,
+      getSafeUserData(newUser),
+      "User created successfully"
+    )
+  );
 });
 
+/* =====================================================
+   GET ALL USERS
+===================================================== */
+
+const getAllUsers = asyncHandler(async (req, res) => {
+  const {
+    isPagination = "true",
+    page = 1,
+    limit = 10,
+    search = "",
+    sortBy = "recent",
+    role,
+    activeStatus,
+  } = req.query;
+
+  const pageNumber = Math.max(
+    1,
+    Number(page) || 1
+  );
+
+  const limitNumber = Math.min(
+    100,
+    Math.max(1, Number(limit) || 10)
+  );
+
+  const filter = {};
+
+  if (role && ["User", "Admin"].includes(role)) {
+    filter.role = role;
+  }
+
+  if (activeStatus !== undefined) {
+    filter.activeStatus =
+      String(activeStatus).toLowerCase() === "true";
+  }
+
+  if (String(search).trim()) {
+    const regex = new RegExp(
+      String(search).trim(),
+      "i"
+    );
+
+    filter.$or = [
+      { name: regex },
+      { phone: regex },
+      { email: regex },
+      { occupation: regex },
+    ];
+  }
+
+  const sort =
+    sortBy === "oldest"
+      ? { createdAt: 1 }
+      : { createdAt: -1 };
+
+  const totalUsers =
+    await User.countDocuments(filter);
+
+  let query = User.find(filter)
+    .select(
+      "-password -otp -otpExpiration -authToken"
+    )
+    .sort(sort);
+
+  if (isPagination === "true") {
+    query = query
+      .skip(
+        (pageNumber - 1) * limitNumber
+      )
+      .limit(limitNumber);
+  }
+
+  const users = await query.lean();
+
+  return res.status(200).json(
+    new apiResponse(
+      200,
+      {
+        users,
+        totalUsers,
+        totalPages:
+          isPagination === "true"
+            ? Math.ceil(
+                totalUsers / limitNumber
+              )
+            : 1,
+        currentPage: pageNumber,
+      },
+      "Users fetched successfully"
+    )
+  );
+});
+
+/* =====================================================
+   GET LOGGED-IN PROFILE
+===================================================== */
+
+const getProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(
+    req.user._id
+  ).select(
+    "-password -otp -otpExpiration -authToken"
+  );
+
+  if (!user) {
+    return res.status(404).json(
+      new apiResponse(
+        404,
+        null,
+        "User not found"
+      )
+    );
+  }
+
+  return res.status(200).json(
+    new apiResponse(
+      200,
+      getSafeUserData(user),
+      "Profile fetched successfully"
+    )
+  );
+});
+
+/* =====================================================
+   UPDATE USER
+===================================================== */
+
+const updateUserById = asyncHandler(
+  async (req, res) => {
+    const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      return res.status(400).json(
+        new apiResponse(
+          400,
+          null,
+          "Invalid user ID"
+        )
+      );
+    }
+
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json(
+        new apiResponse(
+          404,
+          null,
+          "User not found"
+        )
+      );
+    }
+
+    const allowedFields = [
+      "name",
+      "email",
+      "gender",
+      "dob",
+      "profilepic",
+      "occupation",
+      "address",
+      "activeStatus",
+    ];
+
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        if (
+          field === "email" &&
+          req.body[field]
+        ) {
+          user[field] = String(
+            req.body[field]
+          )
+            .trim()
+            .toLowerCase();
+        } else {
+          user[field] = req.body[field];
+        }
+      }
+    }
+
+    setFirstLoginStatus(user, false);
+
+    await user.save();
+
+    return res.status(200).json(
+      new apiResponse(
+        200,
+        getSafeUserData(user),
+        "User updated successfully"
+      )
+    );
+  }
+);
+
+/* =====================================================
+   UPDATE USER ROLE
+===================================================== */
+
+const updateUserRole = asyncHandler(
+  async (req, res) => {
+    const { userId } = req.params;
+    const { role } = req.body;
+
+    if (!isValidObjectId(userId)) {
+      return res.status(400).json(
+        new apiResponse(
+          400,
+          null,
+          "Invalid user ID"
+        )
+      );
+    }
+
+    if (!["User", "Admin"].includes(role)) {
+      return res.status(400).json(
+        new apiResponse(
+          400,
+          null,
+          "Role must be User or Admin"
+        )
+      );
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json(
+        new apiResponse(
+          404,
+          null,
+          "User not found"
+        )
+      );
+    }
+
+    user.role = role;
+
+    await user.save();
+
+    return res.status(200).json(
+      new apiResponse(
+        200,
+        getSafeUserData(user),
+        "User role updated successfully"
+      )
+    );
+  }
+);
+
+/* =====================================================
+   CREATE PASSWORD
+===================================================== */
+
+const createPassword = asyncHandler(
+  async (req, res) => {
+    const phone = normalizePhone(
+      req.body.phone || req.user?.phone
+    );
+
+    const password = String(
+      req.body.password || ""
+    );
+
+    if (!phone || !password) {
+      return res.status(400).json(
+        new apiResponse(
+          400,
+          null,
+          "Phone number and password are required"
+        )
+      );
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json(
+        new apiResponse(
+          400,
+          null,
+          "Password must contain at least 6 characters"
+        )
+      );
+    }
+
+    const user = await User.findOne({
+      phone,
+    }).select("+password");
+
+    if (!user) {
+      return res.status(404).json(
+        new apiResponse(
+          404,
+          null,
+          "User not found"
+        )
+      );
+    }
+
+    if (user.password) {
+      return res.status(400).json(
+        new apiResponse(
+          400,
+          null,
+          "Password is already set for this user"
+        )
+      );
+    }
+
+    user.password = await bcrypt.hash(
+      password,
+      10
+    );
+
+    setFirstLoginStatus(user, false);
+
+    await user.save();
+
+    return res.status(200).json(
+      new apiResponse(
+        200,
+        null,
+        "Password created successfully"
+      )
+    );
+  }
+);
+
+/* =====================================================
+   UPDATE PASSWORD
+===================================================== */
+
+const updatePassword = asyncHandler(
+  async (req, res) => {
+    const phone = normalizePhone(
+      req.body.phone || req.user?.phone
+    );
+
+    const oldPassword = String(
+      req.body.oldPassword || ""
+    );
+
+    const newPassword = String(
+      req.body.newPassword || ""
+    );
+
+    if (
+      !phone ||
+      !oldPassword ||
+      !newPassword
+    ) {
+      return res.status(400).json(
+        new apiResponse(
+          400,
+          null,
+          "Phone number, old password and new password are required"
+        )
+      );
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json(
+        new apiResponse(
+          400,
+          null,
+          "New password must contain at least 6 characters"
+        )
+      );
+    }
+
+    const user = await User.findOne({
+      phone,
+    }).select("+password");
+
+    if (!user) {
+      return res.status(404).json(
+        new apiResponse(
+          404,
+          null,
+          "User not found"
+        )
+      );
+    }
+
+    if (!user.password) {
+      return res.status(400).json(
+        new apiResponse(
+          400,
+          null,
+          "Password has not been created for this user"
+        )
+      );
+    }
+
+    const isCorrectPassword =
+      await user.matchPassword(oldPassword);
+
+    if (!isCorrectPassword) {
+      return res.status(400).json(
+        new apiResponse(
+          400,
+          null,
+          "Old password is incorrect"
+        )
+      );
+    }
+
+    user.password = await bcrypt.hash(
+      newPassword,
+      10
+    );
+
+    await user.save();
+
+    return res.status(200).json(
+      new apiResponse(
+        200,
+        null,
+        "Password updated successfully"
+      )
+    );
+  }
+);
+
+/* =====================================================
+   RESET PASSWORD
+===================================================== */
+
+const resetPassword = asyncHandler(
+  async (req, res) => {
+    const phone = normalizePhone(
+      req.body.phone || req.user?.phone
+    );
+
+    const password = String(
+      req.body.password ||
+        req.body.newPassword ||
+        ""
+    );
+
+    if (!phone || !password) {
+      return res.status(400).json(
+        new apiResponse(
+          400,
+          null,
+          "Phone number and new password are required"
+        )
+      );
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json(
+        new apiResponse(
+          400,
+          null,
+          "New password must contain at least 6 characters"
+        )
+      );
+    }
+
+    const user = await User.findOne({
+      phone,
+    }).select("+password");
+
+    if (!user) {
+      return res.status(404).json(
+        new apiResponse(
+          404,
+          null,
+          "User not found"
+        )
+      );
+    }
+
+    user.password = await bcrypt.hash(
+      password,
+      10
+    );
+
+    setFirstLoginStatus(user, false);
+
+    await user.save();
+
+    return res.status(200).json(
+      new apiResponse(
+        200,
+        null,
+        "Password reset successfully"
+      )
+    );
+  }
+);
+
+/* =====================================================
+   DELETE USER
+===================================================== */
+
+const deleteUser = asyncHandler(
+  async (req, res) => {
+    const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      return res.status(400).json(
+        new apiResponse(
+          400,
+          null,
+          "Invalid user ID"
+        )
+      );
+    }
+
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json(
+        new apiResponse(
+          404,
+          null,
+          "User not found"
+        )
+      );
+    }
+
+    await User.findByIdAndDelete(id);
+
+    return res.status(200).json(
+      new apiResponse(
+        200,
+        null,
+        "User deleted successfully"
+      )
+    );
+  }
+);
 
 export {
   registerOrLogin,
-  createUser,
   verifyOtp,
   resendOtp,
-  updateUserById,
+  loginWithPassword,
+  createUser,
   getAllUsers,
   getProfile,
-  loginWithPassword,
+  updateUserById,
   updateUserRole,
+  createPassword,
   updatePassword,
   resetPassword,
   deleteUser,
-  createPassword,
 };

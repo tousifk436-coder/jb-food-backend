@@ -1,4 +1,5 @@
 import { Router } from "express";
+
 import {
   createUser,
   deleteUser,
@@ -14,31 +15,100 @@ import {
   updateUserRole,
   verifyOtp,
 } from "../controllers/authController.js";
+
 import {
-  authorizeUserType,
   verifyJWT,
+  authorizeUserType,
 } from "../middlewares/authTypeMiddleware.js";
 
-const routes = Router();
+const router = Router();
 
-// auth
-routes.route("/registerOrLogin").post(registerOrLogin);
-routes.route("/verifyOtp").post(verifyOtp);
-routes.route("/resendOtp").post(resendOtp);
+/* =====================================================
+   PUBLIC AUTH ROUTES
+===================================================== */
 
-routes.route("/profile").get(verifyJWT, getProfile);
+router.post(
+  "/registerOrLogin",
+  registerOrLogin
+);
 
-routes.route("/loginWithPassword").post(loginWithPassword);
-routes.route("/createPassword").post(verifyJWT, createPassword);
-routes.route("/updatePassword").post(verifyJWT, updatePassword);
-routes.route("/resetPassword").post(verifyJWT, resetPassword);
+router.post(
+  "/verifyOtp",
+  verifyOtp
+);
 
-routes.route("/update/:id").patch(updateUserById);
-routes.route("/delete/:id").delete(verifyJWT, deleteUser);
+router.post(
+  "/resendOtp",
+  resendOtp
+);
 
-routes.route("/getAllUsers").get(getAllUsers);
-routes.route("/updateRole/:userId").put(updateUserRole);
+router.post(
+  "/loginWithPassword",
+  loginWithPassword
+);
 
-routes.route("/createUser").post(createUser);
+/* =====================================================
+   PROTECTED USER ROUTES
+===================================================== */
 
-export default routes;
+router.get(
+  "/profile",
+  verifyJWT,
+  getProfile
+);
+
+router.post(
+  "/createPassword",
+  verifyJWT,
+  createPassword
+);
+
+router.post(
+  "/updatePassword",
+  verifyJWT,
+  updatePassword
+);
+
+router.post(
+  "/resetPassword",
+  verifyJWT,
+  resetPassword
+);
+
+/* =====================================================
+   ADMIN USER MANAGEMENT ROUTES
+===================================================== */
+
+router.post(
+  "/createUser",
+  createUser
+);
+
+router.get(
+  "/getAllUsers",
+  verifyJWT,
+  authorizeUserType("Admin"),
+  getAllUsers
+);
+
+router.patch(
+  "/update/:id",
+  verifyJWT,
+  updateUserById
+);
+
+router.put(
+  "/updateRole/:userId",
+  verifyJWT,
+  authorizeUserType("Admin"),
+  updateUserRole
+);
+
+router.delete(
+  "/delete/:id",
+  verifyJWT,
+  authorizeUserType("Admin"),
+  deleteUser
+);
+
+export default router;

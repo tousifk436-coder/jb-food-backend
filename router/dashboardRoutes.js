@@ -1,13 +1,25 @@
 import { Router } from "express";
 
+import {
+  getDashboardSummary,
+} from "../controllers/dashboardController.js";
 
-import { verifyJWT } from "../middlewares/authTypeMiddleware.js";
-import { getDashboardStats } from "../controllers/dashboardController.js";
+import {
+  verifyJWT,
+  authorizeUserType,
+} from "../middlewares/authTypeMiddleware.js";
 
 const router = Router();
 
-// ✅ Public Routes
-router.get("/", getDashboardStats);
+/* =====================================================
+   ADMIN DASHBOARD
+===================================================== */
 
+router.get(
+  "/summary",
+  verifyJWT,
+  authorizeUserType("Admin"),
+  getDashboardSummary
+);
 
 export default router;
