@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+import uploadRoutes from "./router/uploadRoutes.js";
 
 import connectDB from "./config/db.js";
 import authRoutes from "./router/authRoutes.js";
@@ -12,6 +13,7 @@ import faqRoutes from "./router/faqRoutes.js";
 import siteSettingRoutes from "./router/siteSettingRoutes.js";
 import enquiryRoutes from "./router/enquiryRoutes.js";
 import dashboardRoutes from "./router/dashboardRoutes.js";
+import testimonialRoutes from "./router/testimonialRoutes.js";
 
 /* =====================================================
    ENVIRONMENT CONFIGURATION
@@ -86,6 +88,8 @@ app.use(
   "/api/dashboard",
   dashboardRoutes
 );
+app.use("/api/testimonials", testimonialRoutes);
+app.use("/api/upload", uploadRoutes);
 /*
  * New JB General Exports APIs will be added here:
  *
