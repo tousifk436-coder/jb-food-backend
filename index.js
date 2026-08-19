@@ -91,15 +91,7 @@ app.use(
 app.use("/api/testimonials", testimonialRoutes);
 app.use("/api/upload", uploadRoutes);
 /*
- * New JB General Exports APIs will be added here:
- *
- * app.use("/api/home-banners", homeBannerRoutes);
- * app.use("/api/categories", categoryRoutes);
- * app.use("/api/products", productRoutes);
- * app.use("/api/faqs", faqRoutes);
- * app.use("/api/site-settings", siteSettingRoutes);
- * app.use("/api/enquiries", enquiryRoutes);
- */
+ 
 
 /* =====================================================
    ROOT ROUTE
